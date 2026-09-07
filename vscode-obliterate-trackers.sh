@@ -25,30 +25,28 @@ tread() {
   if [ -t 0 ]; then read -r "$1" || true; else read -r "$1" < /dev/tty || true; fi
 }
 
-bar() { printf '+%s+\n' "$(printf '%52s' '' | tr ' ' '-')"; }
-box() { printf '|  %-*s|\n' 49 "$1"; }
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  C_T=$'\033[1;36m'; C_G=$'\033[32m'; C_Y=$'\033[33m'; C_R=$'\033[31m'; C_D=$'\033[2m'; C_0=$'\033[0m'
+else
+  C_T=""; C_G=""; C_Y=""; C_R=""; C_D=""; C_0=""
+fi
+menu_head() {
+  printf '%s\n' "${C_T}----------------------------------------${C_0}" "  $1" "${C_T}----------------------------------------${C_0}"
+}
 
 if [ "$MENU" = "1" ] && can_prompt; then
   echo ""
-  bar
-  box "VS-NOTRACK :: TRACKER KILLER"
-  bar
-  box "WHAT SHOULD I NUKE?"
-  box ""
-  box "(1) NORMAL lockdown .... Store keeps working"
-  box "(2) STRICT lockdown .... zero Microsoft"
-  bar
-  printf "  Mode [1/2]: "; m=""; tread m
+  menu_head "vs-notrack: choose lockdown level"
+  printf '  %s[1] NORMAL%s  %s- telemetry off, Store works (default)%s\n' "$C_G" "$C_0" "$C_D" "$C_0"
+  printf '  %s[2] STRICT%s  %s- zero Microsoft, MS Store dies%s\n' "$C_Y" "$C_0" "$C_D" "$C_0"
+  printf "Choice [1/2]: "; m=""; tread m
   if [ "$m" = "2" ]; then STRICT=1; elif [ -n "$m" ]; then STRICT=0; fi
   echo ""
-  bar
-  box "COPILOT?"
-  box ""
-  box "(1) keep, but disabled ..... (default)"
-  box "(2) uninstall extensions"
-  box "(3) uninstall + purge data"
-  bar
-  printf "  Copilot [1/2/3]: "; c=""; tread c
+  menu_head "vs-notrack: copilot cleanup"
+  printf '  %s[1] KEEP%s  %s- disabled, stays installed (default)%s\n' "$C_G" "$C_0" "$C_D" "$C_0"
+  printf '  %s[2] UNINSTALL%s  %s- remove extensions%s\n' "$C_Y" "$C_0" "$C_D" "$C_0"
+  printf '  %s[3] PURGE%s  %s- remove extensions + data%s\n' "$C_R" "$C_0" "$C_D" "$C_0"
+  printf "Choice [1/2/3]: "; c=""; tread c
   case "$c" in 2) COPILOT=uninstall;; 3) COPILOT=purge;; *) COPILOT=keep;; esac
 fi
 
