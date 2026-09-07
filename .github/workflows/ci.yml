@@ -67,13 +67,12 @@ jobs:
         shell: powershell
         run: |
           $all = Get-Content .\vscode-obliterate-trackers.ps1
-          foreach ($n in @(250, 240, 230, 220, 210, 200, 190, 180, 170, 150, 120, 90, 60, 30)) {
+          foreach ($n in @(12, 14, 17, 25, 29)) {
             $t = $null; $e = $null
-            $seg = $all[($n-1)..($all.Count-1)] -join "`n"
-            [void][System.Management.Automation.Language.Parser]::ParseInput($seg, [ref]$t, [ref]$e)
-            $str = @($e | Where-Object { $_.Message -like '*terminator*' })
-            Write-Host "SEG from ${n}: $($str.Count) string-errors"
-            $str | ForEach-Object { Write-Host "  -> rel-line $($_.Extent.StartLineNumber): $($_.FullyQualifiedErrorId)" }
+            [void][System.Management.Automation.Language.Parser]::ParseInput((($all | Select-Object -First $n) -join "`n"), [ref]$t, [ref]$e)
+            $str = @($e | Where-Object { $_.Message -like '*terminator*' -or $_.Message -like '*token*' })
+            Write-Host "PRE from 1..${n}: $($str.Count) errors"
+            $str | ForEach-Object { Write-Host "  -> line $($_.Extent.StartLineNumber): $($_.Message)" }
           }
 
       - name: PowerShell syntax check (no execution)
