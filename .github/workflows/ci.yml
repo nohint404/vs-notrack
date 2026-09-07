@@ -63,16 +63,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: PowerShell syntax check (no execution)
-        shell: powershell
-        run: |
-          $code = Get-Content -Raw .\vscode-obliterate-trackers.ps1
-          $tokens = $null
-          $parseErrors = $null
-          [void][System.Management.Automation.Language.Parser]::ParseInput($code, [ref]$tokens, [ref]$parseErrors)
-          if ($parseErrors.Count -gt 0) { $parseErrors | ForEach-Object { Write-Host "$($_.Extent.StartLineNumber): $($_.Message)" }; exit 1 }
-          Write-Host "PS1 SYNTAX OK"
-
       - name: PS probe (temporary diagnostics)
         shell: powershell
         run: |
@@ -80,7 +70,7 @@ jobs:
             $t = $null; $e = $null
             [void][System.Management.Automation.Language.Parser]::ParseInput($src, [ref]$t, [ref]$e)
             Write-Host "PROBE ${name}: $($e.Count) errors"
-            $e | ForEach-Object { Write-Host "  -> $($_.Message)" }
+            $e | ForEach-Object { Write-Host "  -> $($_.Extent.StartLineNumber): $($_.Message)" }
           }
           $all = Get-Content .\vscode-obliterate-trackers.ps1
           Test-Snip 'hosts-block' (($all[164..180] -join "`n"))
@@ -93,6 +83,16 @@ jobs:
             [void][System.Management.Automation.Language.Parser]::ParseInput((($all | Select-Object -First $n) -join "`n"), [ref]$t, [ref]$e)
             Write-Host "CHUNK first ${n}: $($e.Count) errors"
           }
+
+      - name: PowerShell syntax check (no execution)
+        shell: powershell
+        run: |
+          $code = Get-Content -Raw .\vscode-obliterate-trackers.ps1
+          $tokens = $null
+          $parseErrors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseInput($code, [ref]$tokens, [ref]$parseErrors)
+          if ($parseErrors.Count -gt 0) { $parseErrors | ForEach-Object { Write-Host "$($_.Extent.StartLineNumber): $($_.Message)" }; exit 1 }
+          Write-Host "PS1 SYNTAX OK"
 
       - name: PSScriptAnalyzer
         shell: powershell
