@@ -238,7 +238,7 @@ if [ "$OS" != "Darwin" ]; then
     fi
   done
 else
-  if command -v code >/dev/null 2>&1 && [ -w /usr/local/bin/code 2>/dev/null ]; then
+  if command -v code >/dev/null 2>&1 && [ -w /usr/local/bin/code ]; then
     echo "[info] macOS: add alias: alias code='code --disable-telemetry --disable-experiments --disable-crash-reporter'"
   fi
 fi
