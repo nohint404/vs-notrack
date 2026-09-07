@@ -70,7 +70,7 @@ jobs:
           $tokens = $null
           $parseErrors = $null
           [void][System.Management.Automation.Language.Parser]::ParseInput($code, [ref]$tokens, [ref]$parseErrors)
-          if ($parseErrors.Count -gt 0) { $parseErrors | ForEach-Object { Write-Host $_.Message }; exit 1 }
+          if ($parseErrors.Count -gt 0) { $parseErrors | ForEach-Object { Write-Host "$($_.Extent.StartLineNumber): $($_.Message)" }; exit 1 }
           Write-Host "PS1 SYNTAX OK"
 
       - name: PSScriptAnalyzer

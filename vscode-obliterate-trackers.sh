@@ -247,12 +247,12 @@ if [ "$OS" = "Darwin" ]; then
   rm -rf "$HOME/Library/Application Support/Code/Crash Reports" \
          "$HOME/Library/Application Support/Code/logs" \
          "$HOME/Library/Application Support/Code/CachedData" 2>/dev/null
-  find "$HOME/Library/Application Support/Code" -iname "*telemetry*" -o -iname "*crash*" 2>/dev/null | xargs rm -rf 2>/dev/null
+  find "$HOME/Library/Application Support/Code" \( -iname "*telemetry*" -o -iname "*crash*" \) -exec rm -rf {} + 2>/dev/null
 else
   rm -rf "$HOME/.config/Code/Crash Reports" "$HOME/.config/Code - Insiders/Crash Reports" \
          "$HOME/.config/Code/CachedData" "$HOME/.config/Code/logs" \
          "$HOME/.config/Code - Insiders/logs" "$HOME/.vscode-crash" /tmp/vscode-crashes 2>/dev/null
-  find "$HOME/.config/Code"* -iname "*telemetry*" -o -iname "*crash*" 2>/dev/null | xargs rm -rf 2>/dev/null
+  find "$HOME/.config/Code"* \( -iname "*telemetry*" -o -iname "*crash*" \) -exec rm -rf {} + 2>/dev/null
 fi
 echo "[ok] telemetry/crash caches cleaned"
 
