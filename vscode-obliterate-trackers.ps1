@@ -168,8 +168,9 @@ if (-not $NoHosts) {
     $hosts = Get-Content $hostsPath -Raw
     $added = 0
     foreach ($h in $blockList) {
-      if ($hosts -notmatch [regex]::Escape($h)) {
-        Add-Content $hostsPath "`n0.0.0.0 $h # vscode-obliterator"
+      $pattern = '*' + $h + '*'
+      if ($hosts -notlike $pattern) {
+        Add-Content $hostsPath ("`n" + '0.0.0.0 ' + $h + ' # vscode-obliterator')
         $added++
       }
     }
