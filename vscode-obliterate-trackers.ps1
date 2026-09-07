@@ -1,13 +1,15 @@
 #Requires -Version 5.1
-# vs-notrack — Windows. Usage: powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 [-Strict] [-NoHosts] [-NoFirewall] [-NoProductPatch]
+# vs-notrack — Windows. Usage: powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 [-Strict] [-PurgeCopilot] [-NoHosts] [-NoFirewall] [-NoProductPatch]
 [CmdletBinding()]
 param(
   [switch]$Strict,
   [switch]$NoHosts,
   [switch]$NoFirewall,
-  [switch]$NoProductPatch
+  [switch]$NoProductPatch,
+  [switch]$PurgeCopilot
 )
 if ($env:VSCODE_OBLITERATOR_STRICT -eq '1') { $Strict = $true }
+if ($env:VSCODE_OBLITERATOR_PURGECOPILOT -eq '1') { $PurgeCopilot = $true }
 
 $ErrorActionPreference = 'SilentlyContinue'
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -212,6 +214,26 @@ Get-ChildItem "$env:APPDATA\Code*" -Recurse -Include '*telemetry*', '*crash*' -E
   Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 Get-ScheduledTask -TaskName '*VSCode*Update*' -ErrorAction SilentlyContinue |
   Disable-ScheduledTask -ErrorAction SilentlyContinue | Out-Null
+
+if ($PurgeCopilot) {
+  if (Get-Command code -ErrorAction SilentlyContinue) {
+    foreach ($ext in @('github.copilot', 'github.copilot-chat')) {
+      & code --uninstall-extension $ext --force 2>$null | Out-Null
+      if (& code --list-extensions 2>$null | Select-String -Quiet -Pattern "^${ext}$") {
+        Write-Host "[info] still present (built-in?): $ext" -ForegroundColor Yellow
+      } else {
+        Write-Host "[ok] uninstalled: $ext" -ForegroundColor Green
+      }
+    }
+  } else {
+    Write-Host "[!] 'code' CLI not found: skipping Copilot uninstall." -ForegroundColor Yellow
+  }
+  foreach ($base in $codeDirs) {
+    Get-ChildItem "$base\User\globalStorage" -Directory -Filter 'github.copilot*' -ErrorAction SilentlyContinue |
+      Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+  }
+  Write-Host '[ok] Copilot data purged' -ForegroundColor Green
+}
 
 $flags = ' --disable-telemetry --disable-experiments --disable-crash-reporter'
 $links = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Visual Studio Code*.lnk" -ErrorAction SilentlyContinue

@@ -25,7 +25,7 @@ jobs:
           mkdir -p "$FAKEHOME/.config/Code/User"
           echo '{"editor.fontSize": 15, "telemetry.telemetryLevel": "error"}' > "$FAKEHOME/.config/Code/User/settings.json"
           echo '{"foo": 1}' > "$FAKEHOME/.config/Code/argv.json"
-          HOME="$FAKEHOME" NO_HOSTS=1 NO_PRODUCT_PATCH=1 bash vscode-obliterate-trackers.sh
+          HOME="$FAKEHOME" NO_HOSTS=1 NO_PRODUCT_PATCH=1 MENU=0 bash vscode-obliterate-trackers.sh
           python3 - "$FAKEHOME" <<'EOF'
           import json, sys
           home = sys.argv[1]
@@ -45,9 +45,9 @@ jobs:
           export FAKEHOME="$(mktemp -d)"
           mkdir -p "$FAKEHOME/.config/Code/User"
           echo '{}' > "$FAKEHOME/.config/Code/User/settings.json"
-          HOME="$FAKEHOME" STRICT=1 NO_HOSTS=1 NO_PRODUCT_PATCH=1 bash vscode-obliterate-trackers.sh
+          HOME="$FAKEHOME" STRICT=1 NO_HOSTS=1 NO_PRODUCT_PATCH=1 COPILOT=purge MENU=0 bash vscode-obliterate-trackers.sh
           cp "$FAKEHOME/.config/Code/User/settings.json" /tmp/strict1.json
-          HOME="$FAKEHOME" STRICT=1 NO_HOSTS=1 NO_PRODUCT_PATCH=1 bash vscode-obliterate-trackers.sh
+          HOME="$FAKEHOME" STRICT=1 NO_HOSTS=1 NO_PRODUCT_PATCH=1 COPILOT=purge MENU=0 bash vscode-obliterate-trackers.sh
           python3 - <<'EOF'
           import json
           s = json.load(open("/tmp/strict1.json"))
@@ -55,7 +55,7 @@ jobs:
           print("STRICT OK")
           EOF
           # idempotenza: secondo run non deve cambiare il file (a parte i backup)
-          HOME="$FAKEHOME" STRICT=1 NO_HOSTS=1 NO_PRODUCT_PATCH=1 bash vscode-obliterate-trackers.sh >/dev/null
+          HOME="$FAKEHOME" STRICT=1 NO_HOSTS=1 NO_PRODUCT_PATCH=1 COPILOT=purge MENU=0 bash vscode-obliterate-trackers.sh >/dev/null
           diff /tmp/strict1.json "$FAKEHOME/.config/Code/User/settings.json" && echo "IDEMPOTENZA OK"
 
   powershell:

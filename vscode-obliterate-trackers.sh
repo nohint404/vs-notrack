@@ -1,14 +1,44 @@
 #!/usr/bin/env bash
-# vs-notrack — Linux + macOS. Usage: ./vscode-obliterate-trackers.sh | STRICT=1 ./vscode-obliterate-trackers.sh | sudo ./vscode-obliterate-trackers.sh
+# vs-notrack — Linux + macOS. Usage: curl -fsSL <url> | bash  (interactive menu) | STRICT=1 COPILOT=purge MENU=0 bash script.sh
 set -u
 START_MS=$(date +%s%3N 2>/dev/null || echo 0)
 STRICT="${STRICT:-0}"
 NO_HOSTS="${NO_HOSTS:-0}"
 NO_PRODUCT_PATCH="${NO_PRODUCT_PATCH:-0}"
+MENU="${MENU:-1}"
+MODE_OPT="${MODE_OPT:-}"
+COPILOT="${COPILOT:-keep}"
 
 if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
   SUDO_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
   [ -n "$SUDO_HOME" ] && [ -d "$SUDO_HOME" ] && HOME="$SUDO_HOME"
+fi
+
+case "$MODE_OPT" in strict) STRICT=1;; normal) STRICT=0;; esac
+
+can_prompt() {
+  [ -t 0 ] && return 0
+  exec 9< /dev/tty 2>/dev/null && { exec 9<&-; return 0; }
+  return 1
+}
+tread() {
+  if [ -t 0 ]; then read -r "$1" || true; else read -r "$1" < /dev/tty || true; fi
+}
+
+if [ "$MENU" = "1" ] && can_prompt; then
+  echo ""
+  echo "What should I nuke?"
+  echo "  [1] NORMAL lockdown (default) — Store keeps working"
+  echo "  [2] STRICT lockdown — zero Microsoft, MS Store dies"
+  printf "Mode [1/2]: "; m=""; tread m
+  if [ "$m" = "2" ]; then STRICT=1; elif [ -n "$m" ]; then STRICT=0; fi
+  echo ""
+  echo "Copilot?"
+  echo "  [1] keep, but disabled (default)"
+  echo "  [2] uninstall Copilot extensions"
+  echo "  [3] uninstall + purge Copilot data"
+  printf "Copilot [1/2/3]: "; c=""; tread c
+  case "$c" in 2) COPILOT=uninstall;; 3) COPILOT=purge;; *) COPILOT=keep;; esac
 fi
 
 if [ "$STRICT" = "1" ]; then MODE="STRICT ☠️  (zero Microsoft)"; else MODE="NORMAL (store working)"; fi
@@ -85,12 +115,32 @@ print(f"[ok] hardened: {path}")
 ' "$ARGV"
 }
 
-if [ "$OS" = "Darwin" ]; then
-  process_base "$HOME/Library/Application Support/Code"
-  process_base "$HOME/Library/Application Support/Code - Insiders"
-else
-  process_base "$HOME/.config/Code"
-  process_base "$HOME/.config/Code - Insiders"
+list_bases() {
+  if [ "$OS" = "Darwin" ]; then
+    printf '%s\n' "$HOME/Library/Application Support/Code" "$HOME/Library/Application Support/Code - Insiders"
+  else
+    printf '%s\n' "$HOME/.config/Code" "$HOME/.config/Code - Insiders"
+  fi
+}
+
+list_bases | while IFS= read -r b; do process_base "$b"; done
+
+if [ "$COPILOT" = "uninstall" ] || [ "$COPILOT" = "purge" ]; then
+  if command -v code >/dev/null 2>&1; then
+    for ext in github.copilot github.copilot-chat; do
+      code --uninstall-extension "$ext" --force >/dev/null 2>&1
+      if code --list-extensions 2>/dev/null | grep -qxi "$ext"; then echo "[info] still present (built-in?): $ext"; else echo "[ok] uninstalled: $ext"; fi
+    done
+  else
+    echo "[!] 'code' CLI not found: skipping extension uninstall"
+  fi
+fi
+
+if [ "$COPILOT" = "purge" ]; then
+  list_bases | while IFS= read -r b; do
+    rm -rf "$b"/User/globalStorage/github.copilot* 2>/dev/null
+  done
+  echo "[ok] Copilot data purged"
 fi
 
 for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do

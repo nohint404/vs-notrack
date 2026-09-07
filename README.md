@@ -29,6 +29,8 @@ curl -fsSL https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-ob
 curl -fsSL https://cdn.jsdelivr.net/gh/nohint404/vs-notrack@main/vscode-obliterate-trackers.sh | bash
 ```
 
+Running it from a terminal opens an interactive menu: pick NORMAL vs STRICT lockdown, then choose what to do with Copilot (keep disabled / uninstall / uninstall + purge data). Non-interactive shells (CI, no TTY) automatically use safe defaults; every choice is also scriptable via env vars (see table below).
+
 Or the classic way:
 
 ```bash
@@ -41,6 +43,10 @@ sudo ./vscode-obliterate-trackers.sh         # + /etc/hosts blocking
 | Env var | Effect |
 |---------|--------|
 | `STRICT=1` | Also blocks the MS Marketplace + points the gallery to Open VSX |
+| `COPILOT=uninstall` | Uninstalls Copilot extensions (`github.copilot`, `github.copilot-chat`) |
+| `COPILOT=purge` | Uninstalls Copilot extensions + deletes their leftover data |
+| `MODE_OPT=strict` / `normal` | Scriptable alternative to `STRICT=1` / unset |
+| `MENU=0` | Skips the interactive menu (uses env/defaults) |
 | `NO_HOSTS=1` | Skips `/etc/hosts` modification |
 | `NO_PRODUCT_PATCH=1` | Skips `product.json` neutralization |
 
@@ -66,6 +72,7 @@ powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 -Strict 
 | Flag | Effect |
 |------|--------|
 | `-Strict` | Also blocks the MS Marketplace + points the gallery to Open VSX |
+| `-PurgeCopilot` | Uninstalls Copilot extensions + deletes their leftover data |
 | `-NoHosts` | Skips `hosts` file modification |
 | `-NoFirewall` | Skips outbound firewall rules |
 | `-NoProductPatch` | Skips `product.json` neutralization |
