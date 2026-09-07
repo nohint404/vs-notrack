@@ -66,18 +66,18 @@ jobs:
       - name: PS probe (temporary diagnostics)
         shell: powershell
         run: |
-          function Test-Snip($name, $src) {
+          $all = Get-Content .\vscode-obliterate-trackers.ps1
+          function Test-Cut($name, $a, $b) {
             $t = $null; $e = $null
+            $src = @(if ($a -gt 0) { $all[0..($a-1)] }; $all[$b..($all.Count-1)]) -join "`n"
             [void][System.Management.Automation.Language.Parser]::ParseInput($src, [ref]$t, [ref]$e)
-            Write-Host "SNIP ${name}: $($e.Count) errors"
+            Write-Host "CUT ${name}: $($e.Count) errors"
             $e | ForEach-Object { Write-Host "  -> line $($_.Extent.StartLineNumber): $($_.Message)" }
           }
-          Test-Snip 'l248-exact' 'Write-Host "[ok] patched shortcut: $($l.Name)" -ForegroundColor Green'
-          Test-Snip 'lsub-min' 'Write-Host "x $($l.Name) y"'
-          Test-Snip 'assign-sub' '$x = "$($l.Name)"'
-          Test-Snip 'multiletter' 'Write-Host "x $($link.Name) y"'
-          Test-Snip 'nosub' 'Write-Host "[ok] patched shortcut: $l"'
-          Test-Snip 'l254-exact' 'Write-Host "`nOBLITERATED [$mode] in $($stopwatch.ElapsedMilliseconds) ms. Restart VSCode."'
+          Test-Cut 'no-purge-219-237' 218 237
+          Test-Cut 'no-firewallwipe-184-217' 183 217
+          Test-Cut 'no-shortcuts-239-251' 238 251
+          Test-Cut 'no-hosts-165-182' 164 182
 
       - name: PowerShell syntax check (no execution)
         shell: powershell
