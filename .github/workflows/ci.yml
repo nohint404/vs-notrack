@@ -73,6 +73,27 @@ jobs:
           if ($parseErrors.Count -gt 0) { $parseErrors | ForEach-Object { Write-Host "$($_.Extent.StartLineNumber): $($_.Message)" }; exit 1 }
           Write-Host "PS1 SYNTAX OK"
 
+      - name: PS probe (temporary diagnostics)
+        shell: powershell
+        run: |
+          function Test-Snip($name, $src) {
+            $t = $null; $e = $null
+            [void][System.Management.Automation.Language.Parser]::ParseInput($src, [ref]$t, [ref]$e)
+            Write-Host "PROBE ${name}: $($e.Count) errors"
+            $e | ForEach-Object { Write-Host "  -> $($_.Message)" }
+          }
+          $all = Get-Content .\vscode-obliterate-trackers.ps1
+          Test-Snip 'hosts-block' (($all[164..180] -join "`n"))
+          Test-Snip 'purge-block' (($all[218..233] -join "`n"))
+          Test-Snip 'line254' ($all[253])
+          Test-Snip 'orig-addcontent' 'Add-Content $hostsPath "`n0.0.0.0 $h # vscode-obliterator"'
+          Test-Snip 'select-string' 'if (& code --list-extensions 2>$null | Select-String -Quiet -Pattern "^${ext}$") { 1 }'
+          foreach ($n in @(100, 160, 170, 180, 200, 220, 240, 260)) {
+            $t = $null; $e = $null
+            [void][System.Management.Automation.Language.Parser]::ParseInput((($all | Select-Object -First $n) -join "`n"), [ref]$t, [ref]$e)
+            Write-Host "CHUNK first ${n}: $($e.Count) errors"
+          }
+
       - name: PSScriptAnalyzer
         shell: powershell
         run: |
