@@ -1,4 +1,4 @@
-# ☠️ vs-notrack — VSCode Microsoft Tracker Obliterator
+# ☠️ VSCode Microsoft Tracker Obliterator
 
 ![CI](https://github.com/nohint404/vs-notrack/actions/workflows/ci.yml/badge.svg)
 ![platform](https://img.shields.io/badge/OS-Windows%20%7C%20Linux%20%7C%20macOS-blue)
