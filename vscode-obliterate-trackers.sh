@@ -25,23 +25,34 @@ tread() {
   if [ -t 0 ]; then read -r "$1" || true; else read -r "$1" < /dev/tty || true; fi
 }
 
+bar() { printf '+%s+\n' "$(printf '%52s' '' | tr ' ' '-')"; }
+box() { printf '|  %-*s|\n' 49 "$1"; }
+
 if [ "$MENU" = "1" ] && can_prompt; then
   echo ""
-  echo "What should I nuke?"
-  echo "  [1] NORMAL lockdown (default) — Store keeps working"
-  echo "  [2] STRICT lockdown — zero Microsoft, MS Store dies"
-  printf "Mode [1/2]: "; m=""; tread m
+  bar
+  box "VS-NOTRACK :: TRACKER KILLER"
+  bar
+  box "WHAT SHOULD I NUKE?"
+  box ""
+  box "(1) NORMAL lockdown .... Store keeps working"
+  box "(2) STRICT lockdown .... zero Microsoft"
+  bar
+  printf "  Mode [1/2]: "; m=""; tread m
   if [ "$m" = "2" ]; then STRICT=1; elif [ -n "$m" ]; then STRICT=0; fi
   echo ""
-  echo "Copilot?"
-  echo "  [1] keep, but disabled (default)"
-  echo "  [2] uninstall Copilot extensions"
-  echo "  [3] uninstall + purge Copilot data"
-  printf "Copilot [1/2/3]: "; c=""; tread c
+  bar
+  box "COPILOT?"
+  box ""
+  box "(1) keep, but disabled ..... (default)"
+  box "(2) uninstall extensions"
+  box "(3) uninstall + purge data"
+  bar
+  printf "  Copilot [1/2/3]: "; c=""; tread c
   case "$c" in 2) COPILOT=uninstall;; 3) COPILOT=purge;; *) COPILOT=keep;; esac
 fi
 
-if [ "$STRICT" = "1" ]; then MODE="STRICT ☠️  (zero Microsoft)"; else MODE="NORMAL (store working)"; fi
+if [ "$STRICT" = "1" ]; then MODE="STRICT (zero Microsoft)"; else MODE="NORMAL (store working)"; fi
 echo "=== VSCODE TRACKER OBLITERATOR — Linux/macOS [$MODE] ==="
 
 OS="$(uname -s)"
@@ -246,9 +257,9 @@ fi
 echo "[ok] telemetry/crash caches cleaned"
 
 if [ "$START_MS" != "0" ]; then
-  END_MS=$(date +%s%3N); echo ""; echo "☠️  OBLITERATED [$MODE] in $((END_MS-START_MS)) ms. Restart VSCode."
+  END_MS=$(date +%s%3N); echo ""; echo "OBLITERATED [$MODE] in $((END_MS-START_MS)) ms. Restart VSCode."
 else
-  echo ""; echo "☠️  OBLITERATED [$MODE]. Restart VSCode."
+  echo ""; echo "OBLITERATED [$MODE]. Restart VSCode."
 fi
 echo "Verify: Settings -> search telemetry -> OFF."
 if [ "$STRICT" = "1" ]; then

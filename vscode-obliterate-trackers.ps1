@@ -13,7 +13,7 @@ if ($env:VSCODE_OBLITERATOR_PURGECOPILOT -eq '1') { $PurgeCopilot = $true }
 
 $ErrorActionPreference = 'SilentlyContinue'
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-$mode = if ($Strict) { 'STRICT ☠️  (zero Microsoft)' } else { 'NORMAL (store working)' }
+$mode = if ($Strict) { 'STRICT (zero Microsoft)' } else { 'NORMAL (store working)' }
 Write-Host "`n=== VSCODE TRACKER OBLITERATOR — Windows [$mode] ===" -ForegroundColor Red
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
@@ -250,7 +250,7 @@ foreach ($l in $links) {
 }
 
 $stopwatch.Stop()
-Write-Host "`n☠️  OBLITERATED [$mode] in $($stopwatch.ElapsedMilliseconds) ms. Restart VSCode." -ForegroundColor Red
+Write-Host "`nOBLITERATED [$mode] in $($stopwatch.ElapsedMilliseconds) ms. Restart VSCode." -ForegroundColor Red
 Write-Host 'Verify: Settings -> search telemetry -> OFF | Help -> Toggle Developer Tools -> Network: zero vortex/dc calls.' -ForegroundColor Cyan
 if (-not $Strict) {
   Write-Host 'Want ZERO MS contacts (Store dies)? Re-run with -Strict.' -ForegroundColor DarkYellow
