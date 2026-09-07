@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-# vs-notrack — Windows. Uso: powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 [-Strict] [-NoHosts] [-NoFirewall] [-NoProductPatch]
+# vs-notrack — Windows. Usage: powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 [-Strict] [-NoHosts] [-NoFirewall] [-NoProductPatch]
 [CmdletBinding()]
 param(
   [switch]$Strict,
@@ -11,14 +11,14 @@ if ($env:VSCODE_OBLITERATOR_STRICT -eq '1') { $Strict = $true }
 
 $ErrorActionPreference = 'SilentlyContinue'
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-$mode = if ($Strict) { 'STRICT ☠️  (zero Microsoft)' } else { 'NORMAL (store attivo)' }
+$mode = if ($Strict) { 'STRICT ☠️  (zero Microsoft)' } else { 'NORMAL (store working)' }
 Write-Host "`n=== VSCODE TRACKER OBLITERATOR — Windows [$mode] ===" -ForegroundColor Red
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
   ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
-  Write-Host "[!] Non sei Admin: settings+argv+env verranno blindati comunque." -ForegroundColor Yellow
-  Write-Host "    Rilancia come Amministratore per hosts + firewall." -ForegroundColor Yellow
+  Write-Host "[!] Not Admin: settings+argv+env will still be locked down." -ForegroundColor Yellow
+  Write-Host "    Re-run as Administrator for hosts + firewall." -ForegroundColor Yellow
 }
 
 Get-Process Code, 'Visual Studio Code' -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -80,7 +80,7 @@ foreach ($base in $codeDirs) {
   }
   foreach ($k in $killer.Keys) { $settings[$k] = $killer[$k] }
   $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsPath -Encoding UTF8
-  Write-Host "[ok] blindato: $SettingsPath" -ForegroundColor Green
+  Write-Host "[ok] hardened: $SettingsPath" -ForegroundColor Green
 
   Backup-File $ArgvPath
   $argv = @{}
@@ -91,7 +91,7 @@ foreach ($base in $codeDirs) {
   $argv['disable-telemetry'] = $true
   $argv['disable-experiments'] = $true
   $argv | ConvertTo-Json -Depth 10 | Set-Content $ArgvPath -Encoding UTF8
-  Write-Host "[ok] blindato: $ArgvPath" -ForegroundColor Green
+  Write-Host "[ok] hardened: $ArgvPath" -ForegroundColor Green
 }
 
 [Environment]::SetEnvironmentVariable('VSCODE_TELEMETRY_LEVEL', 'off', 'User')
@@ -128,10 +128,10 @@ if (-not $NoProductPatch) {
       if ($changed) {
         Copy-Item $pp "$pp.bak-$(Get-Date -Format 'yyyyMMdd-HHmmss')" -Force
         $pj | ConvertTo-Json -Depth 20 | Set-Content $pp -Encoding UTF8
-        Write-Host "[ok] neutralizzato: $pp" -ForegroundColor Green
+        Write-Host "[ok] neutralized: $pp" -ForegroundColor Green
       }
     } catch {
-      Write-Host "[!] product.json non patchato (si sovrascrive agli update, normale): $pp" -ForegroundColor Yellow
+      Write-Host "[!] product.json not patched (overwritten on updates, normal): $pp" -ForegroundColor Yellow
     }
   }
 }
@@ -171,10 +171,10 @@ if (-not $NoHosts) {
         $added++
       }
     }
-    Write-Host "[ok] hosts: $added domini bloccati" -ForegroundColor Green
+    Write-Host "[ok] hosts: $added domains blocked" -ForegroundColor Green
     ipconfig /flushdns | Out-Null
   } catch {
-    Write-Host '[!] hosts non modificato: rilancia come Amministratore.' -ForegroundColor Yellow
+    Write-Host '[!] hosts not modified: re-run as Administrator.' -ForegroundColor Yellow
   }
 }
 
@@ -188,10 +188,10 @@ if (-not $NoFirewall -and $isAdmin) {
           -Program $codeExe -RemoteAddress $d -ErrorAction SilentlyContinue | Out-Null
       }
     }
-    Write-Host '[ok] regole firewall outbound create' -ForegroundColor Green
+    Write-Host '[ok] outbound firewall rules created' -ForegroundColor Green
   }
 } elseif (-not $NoFirewall) {
-  Write-Host '[!] firewall saltato (serve Admin).' -ForegroundColor Yellow
+  Write-Host '[!] firewall skipped (needs Admin).' -ForegroundColor Yellow
 }
 
 $toWipe = @(
@@ -205,7 +205,7 @@ $toWipe = @(
 foreach ($p in $toWipe) {
   if (Test-Path $p) {
     Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Host "[pulito] $p" -ForegroundColor DarkGray
+    Write-Host "[cleaned] $p" -ForegroundColor DarkGray
   }
 }
 Get-ChildItem "$env:APPDATA\Code*" -Recurse -Include '*telemetry*', '*crash*' -ErrorAction SilentlyContinue |
@@ -222,16 +222,16 @@ foreach ($l in $links) {
     if ($sc.Arguments -notmatch 'disable-telemetry') {
       $sc.Arguments += $flags
       $sc.Save()
-      Write-Host "[ok] patchata scorciatoia: $($l.Name)" -ForegroundColor Green
+      Write-Host "[ok] patched shortcut: $($l.Name)" -ForegroundColor Green
     }
   } catch { }
 }
 
 $stopwatch.Stop()
-Write-Host "`n☠️  OBLITERATO [$mode] in $($stopwatch.ElapsedMilliseconds) ms. Riavvia VSCode." -ForegroundColor Red
-Write-Host 'Verifica: Impostazioni -> cerca telemetry -> OFF | Help -> Toggle Developer Tools -> Network: zero chiamate vortex/dc.' -ForegroundColor Cyan
+Write-Host "`n☠️  OBLITERATED [$mode] in $($stopwatch.ElapsedMilliseconds) ms. Restart VSCode." -ForegroundColor Red
+Write-Host 'Verify: Settings -> search telemetry -> OFF | Help -> Toggle Developer Tools -> Network: zero vortex/dc calls.' -ForegroundColor Cyan
 if (-not $Strict) {
-  Write-Host 'Vuoi ZERO contatti MS (muore lo Store)? Rilancia con -Strict.' -ForegroundColor DarkYellow
+  Write-Host 'Want ZERO MS contacts (Store dies)? Re-run with -Strict.' -ForegroundColor DarkYellow
 } else {
-  Write-Host 'STRICT attivo: installa estensioni da https://open-vsx.org (comando: code --install-extension file.vsix).' -ForegroundColor DarkYellow
+  Write-Host 'STRICT active: install extensions from https://open-vsx.org (run: code --install-extension file.vsix).' -ForegroundColor DarkYellow
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# vs-notrack — Linux + macOS. Uso: ./vscode-obliterate-trackers.sh | STRICT=1 ./vscode-obliterate-trackers.sh | sudo ./vscode-obliterate-trackers.sh
+# vs-notrack — Linux + macOS. Usage: ./vscode-obliterate-trackers.sh | STRICT=1 ./vscode-obliterate-trackers.sh | sudo ./vscode-obliterate-trackers.sh
 set -u
 START_MS=$(date +%s%3N 2>/dev/null || echo 0)
 STRICT="${STRICT:-0}"
@@ -11,7 +11,7 @@ if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
   [ -n "$SUDO_HOME" ] && [ -d "$SUDO_HOME" ] && HOME="$SUDO_HOME"
 fi
 
-if [ "$STRICT" = "1" ]; then MODE="STRICT ☠️  (zero Microsoft)"; else MODE="NORMAL (store attivo)"; fi
+if [ "$STRICT" = "1" ]; then MODE="STRICT ☠️  (zero Microsoft)"; else MODE="NORMAL (store working)"; fi
 echo "=== VSCODE TRACKER OBLITERATOR — Linux/macOS [$MODE] ==="
 
 OS="$(uname -s)"
@@ -68,7 +68,7 @@ if os.path.exists(path):
     except Exception: data = {}
 data.update(killer)
 json.dump(data, open(path, "w"), indent=4)
-print(f"[ok] blindato: {path}")
+print(f"[ok] hardened: {path}")
 ' "$SETTINGS"
 
   [ -f "$ARGV" ] && cp -f "$ARGV" "$ARGV.bak-$(date +%Y%m%d-%H%M%S)" && echo "[backup] $ARGV"
@@ -81,7 +81,7 @@ if os.path.exists(path):
     except Exception: data = {}
 data.update({"enable-crash-reporter": False, "disable-telemetry": True, "disable-experiments": True})
 json.dump(data, open(path, "w"), indent=4)
-print(f"[ok] blindato: {path}")
+print(f"[ok] hardened: {path}")
 ' "$ARGV"
 }
 
@@ -97,7 +97,7 @@ for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do
   [ -f "$rc" ] || continue
   grep -q "VSCODE_TELEMETRY_LEVEL=off" "$rc" 2>/dev/null || {
     printf '\n# vscode-obliterator\nexport VSCODE_TELEMETRY_LEVEL=off\nexport DOTNET_CLI_TELEMETRY_OPTOUT=1\nexport POWERSHELL_TELEMETRY_OPTOUT=1\nexport NEXT_TELEMETRY_DISABLED=1\n' >> "$rc"
-    echo "[ok] env aggiunto in $rc"
+    echo "[ok] env added to $rc"
   }
 done
 export VSCODE_TELEMETRY_LEVEL=off DOTNET_CLI_TELEMETRY_OPTOUT=1 POWERSHELL_TELEMETRY_OPTOUT=1 NEXT_TELEMETRY_DISABLED=1
@@ -112,7 +112,7 @@ strict = os.environ.get("STRICT_PY") == "1"
 try:
     data = json.load(open(path))
 except Exception as e:
-    print(f"[!] product.json illeggibile: {e}"); sys.exit(0)
+    print(f"[!] product.json unreadable: {e}"); sys.exit(0)
 changed = False
 for k in ("enableTelemetry", "sendASmile", "aiConfig"):
     if k in data: data[k] = False; changed = True
@@ -123,13 +123,13 @@ if strict and "extensionsGallery" in data:
                                  "itemUrl": "https://open-vsx.org/vscode/item"}
     changed = True
 if not changed:
-    print(f"[info] product.json gia neutro: {path}"); sys.exit(0)
+    print(f"[info] product.json already neutral: {path}"); sys.exit(0)
 try:
     shutil.copy(path, path + ".bak-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
     json.dump(data, open(path, "w"), indent=2)
-    print(f"[ok] neutralizzato: {path}")
+    print(f"[ok] neutralized: {path}")
 except PermissionError:
-    print(f"[!] product.json non scrivibile (serve sudo): {path}")
+    print(f"[!] product.json not writable (needs sudo): {path}")
 ' "$1"
   }
   if [ "$OS" = "Darwin" ]; then
@@ -148,18 +148,18 @@ DOMAINS="$TELEMETRY_DOMAINS"
 [ "$STRICT" = "1" ] && DOMAINS="$DOMAINS $MARKETPLACE_DOMAINS"
 
 if [ "$NO_HOSTS" = "1" ]; then
-  echo "[skip] blocco hosts disattivato (NO_HOSTS=1)"
+  echo "[skip] hosts blocking disabled (NO_HOSTS=1)"
 elif [ -w /etc/hosts ]; then
   for d in $DOMAINS; do
     grep -q "$d" /etc/hosts || echo "0.0.0.0 $d # vscode-obliterator" >> /etc/hosts
   done
-  echo "[ok] hosts bloccato ($(echo "$DOMAINS" | wc -w | tr -d ' ') domini)"
+  echo "[ok] hosts blocked ($(echo "$DOMAINS" | wc -w | tr -d ' ') domains)"
   if [ "$OS" = "Darwin" ]; then dscacheutil -flushcache 2>/dev/null; elif command -v systemd-resolve >/dev/null 2>&1; then systemd-resolve --flush-caches 2>/dev/null; fi
 else
   if [ "$(id -u)" -eq 0 ]; then
-    echo "[!] /etc/hosts non scrivibile (filesystem read-only o file immutabile?)"
+    echo "[!] /etc/hosts not writable (read-only filesystem or immutable file?)"
   else
-    echo "[!] /etc/hosts non scrivibile: il sudo va su bash, non su curl:"
+    echo "[!] /etc/hosts not writable: sudo goes on bash, not on curl:"
     echo "    curl -fsSL <url> | sudo bash"
   fi
 fi
@@ -170,15 +170,15 @@ if [ "$OS" != "Darwin" ]; then
     if ! grep -q "disable-telemetry" "$d" 2>/dev/null; then
       if [ -w "$d" ]; then
         sed -i 's|Exec=/usr/share/code/code|Exec=/usr/share/code/code --disable-telemetry --disable-experiments --disable-crash-reporter|; s|Exec=/usr/bin/code|Exec=/usr/bin/code --disable-telemetry --disable-experiments --disable-crash-reporter|' "$d"
-        echo "[ok] patchato launcher $d"
+        echo "[ok] patched launcher $d"
       else
-        echo "[!] launcher $d non scrivibile (serve sudo), salto"
+        echo "[!] launcher $d not writable (needs sudo), skipping"
       fi
     fi
   done
 else
   if command -v code >/dev/null 2>&1 && [ -w /usr/local/bin/code 2>/dev/null ]; then
-    echo "[info] macOS: aggiungi alias: alias code='code --disable-telemetry --disable-experiments --disable-crash-reporter'"
+    echo "[info] macOS: add alias: alias code='code --disable-telemetry --disable-experiments --disable-crash-reporter'"
   fi
 fi
 
@@ -193,16 +193,16 @@ else
          "$HOME/.config/Code - Insiders/logs" "$HOME/.vscode-crash" /tmp/vscode-crashes 2>/dev/null
   find "$HOME/.config/Code"* -iname "*telemetry*" -o -iname "*crash*" 2>/dev/null | xargs rm -rf 2>/dev/null
 fi
-echo "[ok] cache telemetria/crash pulite"
+echo "[ok] telemetry/crash caches cleaned"
 
 if [ "$START_MS" != "0" ]; then
-  END_MS=$(date +%s%3N); echo ""; echo "☠️  OBLITERATO [$MODE] in $((END_MS-START_MS)) ms. Riavvia VSCode."
+  END_MS=$(date +%s%3N); echo ""; echo "☠️  OBLITERATED [$MODE] in $((END_MS-START_MS)) ms. Restart VSCode."
 else
-  echo ""; echo "☠️  OBLITERATO [$MODE]. Riavvia VSCode."
+  echo ""; echo "☠️  OBLITERATED [$MODE]. Restart VSCode."
 fi
-echo "Verifica: Impostazioni -> cerca telemetry -> OFF."
+echo "Verify: Settings -> search telemetry -> OFF."
 if [ "$STRICT" = "1" ]; then
-  echo "STRICT attivo: estensioni da https://open-vsx.org (code --install-extension file.vsix)."
+  echo "STRICT active: get extensions from https://open-vsx.org (code --install-extension file.vsix)."
 else
-  echo "Vuoi ZERO contatti MS (muore lo Store)? Rilancia con STRICT=1."
+  echo "Want ZERO MS contacts (Store dies)? Re-run with STRICT=1."
 fi

@@ -31,12 +31,12 @@ jobs:
           home = sys.argv[1]
           s = json.load(open(home + "/.config/Code/User/settings.json"))
           a = json.load(open(home + "/.config/Code/argv.json"))
-          assert s["telemetry.telemetryLevel"] == "off", "telemetry non OFF"
-          assert s["editor.fontSize"] == 15, "impostazioni utente cancellate!"
+          assert s["telemetry.telemetryLevel"] == "off", "telemetry not OFF"
+          assert s["editor.fontSize"] == 15, "user settings wiped!"
           assert s["workbench.cloudChanges.autoStore"] == "off"
           assert s["telemetry.feedback.enabled"] is False
           assert a["disable-telemetry"] is True and a["enable-crash-reporter"] is False
-          assert "marketplace.visualstudio.com" not in json.dumps(s), "NORMAL non deve toccare lo Store"
+          assert "marketplace.visualstudio.com" not in json.dumps(s), "NORMAL must not touch the Store"
           print("NORMAL OK")
           EOF
 
@@ -51,7 +51,7 @@ jobs:
           python3 - <<'EOF'
           import json
           s = json.load(open("/tmp/strict1.json"))
-          assert s["extensionsGallery.serviceUrl"] == "https://open-vsx.org/vscode/gallery", "STRICT deve puntare a Open VSX"
+          assert s["extensionsGallery.serviceUrl"] == "https://open-vsx.org/vscode/gallery", "STRICT must point to Open VSX"
           print("STRICT OK")
           EOF
           # idempotenza: secondo run non deve cambiare il file (a parte i backup)
