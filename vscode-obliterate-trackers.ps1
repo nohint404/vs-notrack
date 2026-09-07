@@ -1,32 +1,5 @@
 #Requires -Version 5.1
-<#
-.SYNOPSIS
-  VSCode Microsoft Tracker Obliterator — Windows (STRICT)
-  Siamo noi a dominare su Microsoft, non il contrario.
-
-.DESCRIPTION
-  Livello NORMAL (default): ammazza telemetria, crash reporter, experiments,
-  feedback, Edit Sessions cloud, update automatici e telemetria delle
-  estensioni MS. Lo Store estensioni CONTINUA a funzionare.
-
-  Livello STRICT (-Strict): tutto di NORMAL + blocca anche il Marketplace
-  Microsoft e punta a Open VSX (store 100% no-MS). Lo Store Microsoft
-  smette di funzionare — è il prezzo per zero contatti MS.
-
-.PARAMETER Strict
-  Attiva il blocco totale anche del Marketplace + redirect a Open VSX.
-.PARAMETER NoHosts
-  Salta la modifica del file hosts.
-.PARAMETER NoFirewall
-  Salta le regole firewall outbound.
-.PARAMETER NoProductPatch
-  Salta la neutralizzazione di product.json.
-
-.EXAMPLE
-  powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1
-.EXAMPLE
-  powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 -Strict
-#>
+# vs-notrack — Windows. Uso: powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 [-Strict] [-NoHosts] [-NoFirewall] [-NoProductPatch]
 [CmdletBinding()]
 param(
   [switch]$Strict,
@@ -40,9 +13,6 @@ $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $mode = if ($Strict) { 'STRICT ☠️  (zero Microsoft)' } else { 'NORMAL (store attivo)' }
 Write-Host "`n=== VSCODE TRACKER OBLITERATOR — Windows [$mode] ===" -ForegroundColor Red
 
-# ---------------------------------------------------------------
-# 0. Admin check (serve solo per hosts + firewall)
-# ---------------------------------------------------------------
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
   ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
@@ -50,16 +20,10 @@ if (-not $isAdmin) {
   Write-Host "    Rilancia come Amministratore per hosts + firewall." -ForegroundColor Yellow
 }
 
-# ---------------------------------------------------------------
-# 1. Chiudi VSCode per scrivere i file in sicurezza
-# ---------------------------------------------------------------
 Get-Process Code, 'Visual Studio Code' -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 300
 
-# ---------------------------------------------------------------
-# 2. Percorsi (Stable + Insiders, così copriamo tutto)
-# ---------------------------------------------------------------
-$codeDirs = @("$env:APPDATA\Code", "$env:APPDATA\Code - Insiders") | Where-Object { $_ }
+$codeDirs = @("$env:APPDATA\Code", "$env:APPDATA\Code - Insiders")
 foreach ($base in $codeDirs) {
   if (-not (Test-Path $base)) { continue }
   $UserDir = Join-Path $base 'User'
@@ -75,9 +39,6 @@ foreach ($base in $codeDirs) {
     }
   }
 
-  # -----------------------------------------------------------
-  # 3. settings.json — merge, MAI sovrascrittura cieca
-  # -----------------------------------------------------------
   $killer = [ordered]@{
     'telemetry.telemetryLevel'                              = 'off'
     'telemetry.enableTelemetry'                             = $false
@@ -107,10 +68,6 @@ foreach ($base in $codeDirs) {
     'workbench.experimental.editSessions.enabled'           = $false
   }
   if ($Strict) {
-    # In STRICT lo Store MS è morto: disattiviamo tutto ciò che lo chiama
-    $killer['extensions.autoCheckUpdates'] = $false
-    $killer['extensions.autoUpdate'] = $false
-    # Gallery Open VSX (store libero, no account MS)
     $killer['extensionsGallery.serviceUrl'] = 'https://open-vsx.org/vscode/gallery'
     $killer['extensionsGallery.itemUrl'] = 'https://open-vsx.org/vscode/item'
   }
@@ -124,9 +81,6 @@ foreach ($base in $codeDirs) {
   $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsPath -Encoding UTF8
   Write-Host "[ok] blindato: $SettingsPath" -ForegroundColor Green
 
-  # -----------------------------------------------------------
-  # 4. argv.json — kill switch runtime
-  # -----------------------------------------------------------
   Backup-File $ArgvPath
   $argv = @{}
   if (Test-Path $ArgvPath) {
@@ -139,9 +93,6 @@ foreach ($base in $codeDirs) {
   Write-Host "[ok] blindato: $ArgvPath" -ForegroundColor Green
 }
 
-# ---------------------------------------------------------------
-# 5. Env anti-telemetria persistenti (utente)
-# ---------------------------------------------------------------
 [Environment]::SetEnvironmentVariable('VSCODE_TELEMETRY_LEVEL', 'off', 'User')
 [Environment]::SetEnvironmentVariable('DOTNET_CLI_TELEMETRY_OPTOUT', '1', 'User')
 [Environment]::SetEnvironmentVariable('POWERSHELL_TELEMETRY_OPTOUT', '1', 'User')
@@ -149,9 +100,6 @@ foreach ($base in $codeDirs) {
 $env:VSCODE_TELEMETRY_LEVEL = 'off'
 Write-Host '[ok] env VSCODE_TELEMETRY_LEVEL=off (+ DOTNET/POWERSHELL/NEXT opt-out)' -ForegroundColor Green
 
-# ---------------------------------------------------------------
-# 6. product.json — neutralizza gli endpoint hardcoded
-# ---------------------------------------------------------------
 if (-not $NoProductPatch) {
   $productPaths = @(
     "$env:LOCALAPPDATA\Programs\Microsoft VS Code\resources\app\product.json",
@@ -187,9 +135,6 @@ if (-not $NoProductPatch) {
   }
 }
 
-# ---------------------------------------------------------------
-# 7. Blocco DNS via hosts — SOLO telemetria in NORMAL, tutto in STRICT
-# ---------------------------------------------------------------
 $telemetryHosts = @(
   'vortex.data.microsoft.com',
   'vortex-win.data.microsoft.com',
@@ -232,9 +177,6 @@ if (-not $NoHosts) {
   }
 }
 
-# ---------------------------------------------------------------
-# 8. Firewall outbound — seconda muraglia (solo Admin)
-# ---------------------------------------------------------------
 if (-not $NoFirewall -and $isAdmin) {
   $codeExe = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe"
   if (Test-Path $codeExe) {
@@ -251,9 +193,6 @@ if (-not $NoFirewall -and $isAdmin) {
   Write-Host '[!] firewall saltato (serve Admin).' -ForegroundColor Yellow
 }
 
-# ---------------------------------------------------------------
-# 9. Pulizia cache telemetria / crash / update task
-# ---------------------------------------------------------------
 $toWipe = @(
   "$env:APPDATA\Code\Crash Reports",
   "$env:APPDATA\Code - Insiders\Crash Reports",
@@ -273,9 +212,6 @@ Get-ChildItem "$env:APPDATA\Code*" -Recurse -Include '*telemetry*', '*crash*' -E
 Get-ScheduledTask -TaskName '*VSCode*Update*' -ErrorAction SilentlyContinue |
   Disable-ScheduledTask -ErrorAction SilentlyContinue | Out-Null
 
-# ---------------------------------------------------------------
-# 10. Patch scorciatoie menu Start con flag anti-telemetria
-# ---------------------------------------------------------------
 $flags = ' --disable-telemetry --disable-experiments --disable-crash-reporter'
 $links = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Visual Studio Code*.lnk" -ErrorAction SilentlyContinue
 foreach ($l in $links) {

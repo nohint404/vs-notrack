@@ -5,9 +5,6 @@ on:
   pull_request:
 
 jobs:
-  # ---------------------------------------------------------------
-  # Linux/macOS script: lint + test funzionale con HOME finta
-  # ---------------------------------------------------------------
   shell:
     runs-on: ubuntu-latest
     steps:
@@ -61,15 +58,12 @@ jobs:
           HOME="$FAKEHOME" STRICT=1 NO_HOSTS=1 NO_PRODUCT_PATCH=1 bash vscode-obliterate-trackers.sh >/dev/null
           diff /tmp/strict1.json "$FAKEHOME/.config/Code/User/settings.json" && echo "IDEMPOTENZA OK"
 
-  # ---------------------------------------------------------------
-  # Windows script: parsing sintattico con il parser PowerShell nativo
-  # ---------------------------------------------------------------
   powershell:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: PowerShell syntax check (parser API, nessuna esecuzione)
+      - name: PowerShell syntax check (no execution)
         shell: powershell
         run: |
           $errors = $null

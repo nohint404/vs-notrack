@@ -1,19 +1,5 @@
 #!/usr/bin/env bash
-# VSCode Microsoft Tracker Obliterator — Linux + macOS (STRICT)
-# Siamo noi a dominare su Microsoft, non il contrario.
-#
-# NORMAL (default): ammazza telemetria/crash/experiments/feedback/cloud-sync,
-#   neutralizza product.json, blocca i domini telemetria, patcha il launcher.
-#   Lo Store estensioni CONTINUA a funzionare.
-# STRICT (STRICT=1): + blocca anche il Marketplace MS e punta a Open VSX.
-#   Lo Store Microsoft smette di funzionare — zero contatti MS.
-#
-# Uso:
-#   chmod +x vscode-obliterate-trackers.sh
-#   ./vscode-obliterate-trackers.sh              # NORMAL
-#   STRICT=1 ./vscode-obliterate-trackers.sh     # STRICT ☠️
-#   sudo ./vscode-obliterate-trackers.sh         # + blocco /etc/hosts
-#   STRICT=1 NO_HOSTS=1 NO_PRODUCT_PATCH=1 ./vscode-obliterate-trackers.sh
+# vs-notrack — Linux + macOS. Uso: ./vscode-obliterate-trackers.sh | STRICT=1 ./vscode-obliterate-trackers.sh | sudo ./vscode-obliterate-trackers.sh
 set -u
 START_MS=$(date +%s%3N 2>/dev/null || echo 0)
 STRICT="${STRICT:-0}"
@@ -23,18 +9,10 @@ NO_PRODUCT_PATCH="${NO_PRODUCT_PATCH:-0}"
 if [ "$STRICT" = "1" ]; then MODE="STRICT ☠️  (zero Microsoft)"; else MODE="NORMAL (store attivo)"; fi
 echo "=== VSCODE TRACKER OBLITERATOR — Linux/macOS [$MODE] ==="
 
-# ---------------------------------------------------------------
-# 0. Rileva OS e percorsi (Stable + Insiders + VSCodium residue)
-# ---------------------------------------------------------------
 OS="$(uname -s)"
 
 pkill -f "Visual Studio Code" 2>/dev/null; pkill -x code 2>/dev/null; pkill -x codium 2>/dev/null; sleep 0.3
 
-# ---------------------------------------------------------------
-# 1+2. settings.json + argv.json per ogni installazione trovata
-# ---------------------------------------------------------------
-# Nota: i path contengono spazi ("Code - Insiders"), quindi niente word-splitting:
-# ogni base viene passata come singolo argomento a process_base.
 process_base() {
   BASE="$1"
   [ -d "$BASE" ] || return 0
@@ -110,9 +88,6 @@ else
   process_base "$HOME/.config/Code - Insiders"
 fi
 
-# ---------------------------------------------------------------
-# 3. Env persistente anti-telemetria
-# ---------------------------------------------------------------
 for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do
   [ -f "$rc" ] || continue
   grep -q "VSCODE_TELEMETRY_LEVEL=off" "$rc" 2>/dev/null || {
@@ -122,12 +97,8 @@ for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do
 done
 export VSCODE_TELEMETRY_LEVEL=off DOTNET_CLI_TELEMETRY_OPTOUT=1 POWERSHELL_TELEMETRY_OPTOUT=1 NEXT_TELEMETRY_DISABLED=1
 
-# ---------------------------------------------------------------
-# 4. product.json — neutralizza endpoint hardcoded
-# ---------------------------------------------------------------
 if [ "$NO_PRODUCT_PATCH" != "1" ]; then
   patch_product_json() {
-    # $1 = percorso product.json
     [ -f "$1" ] || return 0
     STRICT_PY="$STRICT" python3 - "$1" <<'EOF'
 import json, sys, os, shutil, datetime
@@ -166,9 +137,6 @@ EOF
   fi
 fi
 
-# ---------------------------------------------------------------
-# 5. Blocco DNS via hosts
-# ---------------------------------------------------------------
 TELEMETRY_DOMAINS="vortex.data.microsoft.com vortex-win.data.microsoft.com v10.vortex-win.data.microsoft.com settings-win.data.microsoft.com telecommand.telemetry.microsoft.com telemetry.microsoft.com dc.services.visualstudio.com dc.applicationinsights.azure.com dc.applicationinsights.microsoft.com mobile.events.data.microsoft.com events.data.microsoft.com crl.microsoft.com functionschina.azurecomm.net"
 MARKETPLACE_DOMAINS="marketplace.visualstudio.com vscode.blob.core.windows.net vscode-update.azurewebsites.net update.code.visualstudio.com"
 DOMAINS="$TELEMETRY_DOMAINS"
@@ -187,9 +155,6 @@ else
   echo "    sudo ./vscode-obliterate-trackers.sh"
 fi
 
-# ---------------------------------------------------------------
-# 6. Patch launcher Linux (.desktop) con flag anti-telemetria
-# ---------------------------------------------------------------
 if [ "$OS" != "Darwin" ]; then
   for d in "$HOME/.local/share/applications/visual-studio-code.desktop" "/usr/share/applications/visual-studio-code.desktop" "/usr/share/applications/code.desktop"; do
     [ -f "$d" ] || continue
@@ -203,15 +168,11 @@ if [ "$OS" != "Darwin" ]; then
     fi
   done
 else
-  # macOS: wrapper `code` con flag (se code CLI installata)
   if command -v code >/dev/null 2>&1 && [ -w /usr/local/bin/code 2>/dev/null ]; then
     echo "[info] macOS: aggiungi alias: alias code='code --disable-telemetry --disable-experiments --disable-crash-reporter'"
   fi
 fi
 
-# ---------------------------------------------------------------
-# 7. Pulizia cache telemetria / crash
-# ---------------------------------------------------------------
 if [ "$OS" = "Darwin" ]; then
   rm -rf "$HOME/Library/Application Support/Code/Crash Reports" \
          "$HOME/Library/Application Support/Code/logs" \
