@@ -78,6 +78,7 @@ killer = {
   "workbench.enableExperiments": False,
   "workbench.settings.enableNaturalLanguageSearch": False,
   "workbench.commandPalette.experimental.suggestCommands": False,
+  "workbench.settings.showAISearchToggle": False,
   "workbench.startupEditor": "none",
   "workbench.tipOfTheDay.enabled": False,
   "update.mode": "manual",
@@ -95,8 +96,10 @@ killer = {
   "dotnetAcquisitionExtension.enableTelemetry": False,
   "powershell.telemetry.enabled": False,
   "chat.disableAIFeatures": True,
+  "chat.agent.enabled": False,
   "github.copilot.enable": {"*": False},
   "github.copilot.nextEditSuggestions.enabled": False,
+  "github.copilot.editor.enableCodeActions": False,
   "chat.commandCenter.enabled": False,
   "inlineChat.holdToSpeak.enabled": False,
 }
@@ -137,22 +140,29 @@ list_bases() {
 list_bases | while IFS= read -r b; do process_base "$b"; done
 
 if [ "$COPILOT" = "uninstall" ] || [ "$COPILOT" = "purge" ]; then
-  if command -v code >/dev/null 2>&1; then
+  _code_cli=""
+  for _c in code code-insiders codium; do
+    if command -v "$_c" >/dev/null 2>&1; then _code_cli="$_c"; break; fi
+  done
+  if [ -n "$_code_cli" ]; then
     for ext in github.copilot github.copilot-chat; do
-      code --uninstall-extension "$ext" --force >/dev/null 2>&1
-      if code --list-extensions 2>/dev/null | grep -qxi "$ext"; then echo "[info] still present (built-in?): $ext"; else echo "[ok] uninstalled: $ext"; fi
+      "$_code_cli" --uninstall-extension "$ext" --force 2>&1 | grep -vi "not installed" || true
+      if "$_code_cli" --list-extensions 2>/dev/null | grep -qxi "$ext"; then echo "[!] still present: $ext (close VSCode, re-run: $_code_cli --uninstall-extension $ext --force)"; else echo "[ok] uninstalled: $ext"; fi
     done
   else
     echo "[!] 'code' CLI not found: removing Copilot extension dirs directly"
   fi
-  rm -rf "$HOME"/.vscode/extensions/github.copilot* "$HOME"/.vscode-insiders/extensions/github.copilot* 2>/dev/null
+  rm -rf "$HOME"/.vscode/extensions/github.copilot* "$HOME"/.vscode-insiders/extensions/github.copilot* "$HOME"/.vscode-oss/extensions/github.copilot* 2>/dev/null
+  if ls -d "$HOME"/.vscode/extensions/github.copilot* "$HOME"/.vscode-insiders/extensions/github.copilot* "$HOME"/.vscode-oss/extensions/github.copilot* >/dev/null 2>&1; then
+    echo "[!] Copilot extension dirs still present (close VSCode and re-run)"
+  fi
 fi
 
 if [ "$COPILOT" = "purge" ]; then
   list_bases | while IFS= read -r b; do
-    rm -rf "$b"/User/globalStorage/github.copilot* 2>/dev/null
+    rm -rf "$b"/User/globalStorage/github.copilot* "$b"/User/workspaceStorage/*/github.copilot* 2>/dev/null
   done
-  echo "[ok] Copilot extensions/data purged"
+  echo "[ok] Copilot data purged"
 fi
 
 for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do

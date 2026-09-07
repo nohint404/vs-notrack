@@ -53,6 +53,7 @@ foreach ($base in $codeDirs) {
     'workbench.enableExperiments'                           = $false
     'workbench.settings.enableNaturalLanguageSearch'        = $false
     'workbench.commandPalette.experimental.suggestCommands' = $false
+    'workbench.settings.showAISearchToggle'                 = $false
     'workbench.startupEditor'                               = 'none'
     'workbench.tipOfTheDay.enabled'                         = $false
     'update.mode'                                           = 'manual'
@@ -69,8 +70,10 @@ foreach ($base in $codeDirs) {
     'dotnetAcquisitionExtension.enableTelemetry'            = $false
     'powershell.telemetry.enabled'                          = $false
     'chat.disableAIFeatures'                                = $true
+    'chat.agent.enabled'                                    = $false
     'github.copilot.enable'                                 = @{ '*' = $false }
     'github.copilot.nextEditSuggestions.enabled'            = $false
+    'github.copilot.editor.enableCodeActions'               = $false
     'chat.commandCenter.enabled'                            = $false
     'inlineChat.holdToSpeak.enabled'                        = $false
     'workbench.experimental.editSessions.enabled'           = $false
@@ -222,25 +225,31 @@ Get-ScheduledTask -TaskName '*VSCode*Update*' -ErrorAction SilentlyContinue |
   Disable-ScheduledTask -ErrorAction SilentlyContinue | Out-Null
 
 if ($PurgeCopilot) {
-  if (Get-Command code -ErrorAction SilentlyContinue) {
+  $codeCli = @('code', 'code-insiders', 'codium') | Where-Object { Get-Command $_ -ErrorAction SilentlyContinue } | Select-Object -First 1
+  if ($codeCli) {
     foreach ($ext in @('github.copilot', 'github.copilot-chat')) {
-      & code --uninstall-extension $ext --force 2>$null | Out-Null
-      if (& code --list-extensions 2>$null | Select-String -Quiet -Pattern "^${ext}$") {
-        Write-Host "[info] still present (built-in?): $ext" -ForegroundColor Yellow
+      & $codeCli --uninstall-extension $ext --force 2>&1 | Where-Object { $_ -notmatch 'not installed' }
+      if (& $codeCli --list-extensions 2>$null | Select-String -Quiet -Pattern "^$([regex]::Escape($ext))$") {
+        Write-Host "[!] still present: $ext (close VSCode, re-run: $codeCli --uninstall-extension $ext --force)" -ForegroundColor Yellow
       } else {
         Write-Host "[ok] uninstalled: $ext" -ForegroundColor Green
       }
     }
   } else {
-    Write-Host "[!] 'code' CLI not found: skipping Copilot uninstall." -ForegroundColor Yellow
+    Write-Host "[!] 'code' CLI not found: removing Copilot extension dirs directly." -ForegroundColor Yellow
   }
-  Get-ChildItem "$env:USERPROFILE\.vscode\extensions", "$env:USERPROFILE\.vscode-insiders\extensions" -Directory -Filter 'github.copilot*' -ErrorAction SilentlyContinue |
+  Get-ChildItem "$env:USERPROFILE\.vscode\extensions", "$env:USERPROFILE\.vscode-insiders\extensions", "$env:USERPROFILE\.vscode-oss\extensions" -Directory -Filter 'github.copilot*' -ErrorAction SilentlyContinue |
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
   foreach ($base in $codeDirs) {
     Get-ChildItem "$base\User\globalStorage" -Directory -Filter 'github.copilot*' -ErrorAction SilentlyContinue |
       Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
   }
-  Write-Host '[ok] Copilot extensions/data purged' -ForegroundColor Green
+  $leftover = Get-ChildItem "$env:USERPROFILE\.vscode\extensions", "$env:USERPROFILE\.vscode-insiders\extensions", "$env:USERPROFILE\.vscode-oss\extensions" -Directory -Filter 'github.copilot*' -ErrorAction SilentlyContinue
+  if ($leftover) {
+    Write-Host '[!] Copilot extension dirs still present (close VSCode and re-run).' -ForegroundColor Yellow
+  } else {
+    Write-Host '[ok] Copilot extensions/data purged' -ForegroundColor Green
+  }
 }
 
 $flags = ' --disable-telemetry --disable-experiments --disable-crash-reporter'

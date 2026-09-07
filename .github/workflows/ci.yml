@@ -36,8 +36,11 @@ jobs:
           assert s["workbench.cloudChanges.autoStore"] == "off"
           assert s["telemetry.feedback.enabled"] is False
           assert s["chat.disableAIFeatures"] is True
+          assert s["chat.agent.enabled"] is False
           assert s["github.copilot.enable"] == {"*": False}
           assert s["github.copilot.nextEditSuggestions.enabled"] is False
+          assert s["github.copilot.editor.enableCodeActions"] is False
+          assert s["workbench.settings.showAISearchToggle"] is False
           assert a["disable-telemetry"] is True and a["enable-crash-reporter"] is False
           assert "marketplace.visualstudio.com" not in json.dumps(s), "NORMAL must not touch the Store"
           print("NORMAL OK")
