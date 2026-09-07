@@ -6,6 +6,11 @@ STRICT="${STRICT:-0}"
 NO_HOSTS="${NO_HOSTS:-0}"
 NO_PRODUCT_PATCH="${NO_PRODUCT_PATCH:-0}"
 
+if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
+  SUDO_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+  [ -n "$SUDO_HOME" ] && [ -d "$SUDO_HOME" ] && HOME="$SUDO_HOME"
+fi
+
 if [ "$STRICT" = "1" ]; then MODE="STRICT ☠️  (zero Microsoft)"; else MODE="NORMAL (store attivo)"; fi
 echo "=== VSCODE TRACKER OBLITERATOR — Linux/macOS [$MODE] ==="
 
@@ -151,8 +156,12 @@ elif [ -w /etc/hosts ]; then
   echo "[ok] hosts bloccato ($(echo "$DOMAINS" | wc -w | tr -d ' ') domini)"
   if [ "$OS" = "Darwin" ]; then dscacheutil -flushcache 2>/dev/null; elif command -v systemd-resolve >/dev/null 2>&1; then systemd-resolve --flush-caches 2>/dev/null; fi
 else
-  echo "[!] /etc/hosts non scrivibile: rilancia con sudo per il blocco DNS"
-  echo "    sudo ./vscode-obliterate-trackers.sh"
+  if [ "$(id -u)" -eq 0 ]; then
+    echo "[!] /etc/hosts non scrivibile (filesystem read-only o file immutabile?)"
+  else
+    echo "[!] /etc/hosts non scrivibile: il sudo va su bash, non su curl:"
+    echo "    curl -fsSL <url> | sudo bash"
+  fi
 fi
 
 if [ "$OS" != "Darwin" ]; then

@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-ob
 # STRICT ☠️ — zero Microsoft, MS Store dies, Open VSX is used instead
 curl -fsSL https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-obliterate-trackers.sh | STRICT=1 bash
 
-# With /etc/hosts DNS blocking (needs sudo)
+# With /etc/hosts DNS blocking (needs sudo — sudo goes on bash, NOT on curl)
 curl -fsSL https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-obliterate-trackers.sh | sudo bash
 
 # Mirror (if raw.githubusercontent.com doesn't resolve on your network)
