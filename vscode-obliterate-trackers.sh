@@ -55,7 +55,12 @@ echo "=== VSCODE TRACKER OBLITERATOR - Linux/macOS [$MODE] ==="
 
 OS="$(uname -s)"
 
-pkill -f "Visual Studio Code" 2>/dev/null; pkill -x code 2>/dev/null; pkill -x codium 2>/dev/null; sleep 0.3
+pkill -f "[V]isual Studio Code" 2>/dev/null; pkill -x code 2>/dev/null; pkill -x codium 2>/dev/null
+_w=0
+while pgrep -f "[V]isual Studio Code" >/dev/null 2>&1 || pgrep -x code >/dev/null 2>&1 || pgrep -x codium >/dev/null 2>&1; do
+  _w=$((_w+1)); [ "$_w" -ge 10 ] && break
+  sleep 1
+done
 
 process_base() {
   BASE="$1"
@@ -110,6 +115,9 @@ data = {}
 if os.path.exists(path):
     try: data = json.load(open(path))
     except Exception: data = {}
+ignored = {"github.copilot", "github.copilot-chat"}
+cur = data.get("settingsSync.ignoredExtensions")
+data["settingsSync.ignoredExtensions"] = sorted(set(cur) | ignored) if isinstance(cur, list) else sorted(ignored)
 data.update(killer)
 json.dump(data, open(path, "w"), indent=4)
 print(f"[ok] hardened: {path}")
@@ -140,16 +148,20 @@ list_bases() {
 list_bases | while IFS= read -r b; do process_base "$b"; done
 
 if [ "$COPILOT" = "uninstall" ] || [ "$COPILOT" = "purge" ]; then
-  _code_cli=""
+  _found_cli=0
   for _c in code code-insiders codium; do
-    if command -v "$_c" >/dev/null 2>&1; then _code_cli="$_c"; break; fi
-  done
-  if [ -n "$_code_cli" ]; then
+    command -v "$_c" >/dev/null 2>&1 || continue
+    _found_cli=1
     for ext in github.copilot github.copilot-chat; do
-      "$_code_cli" --uninstall-extension "$ext" --force 2>&1 | grep -vi "not installed" || true
-      if "$_code_cli" --list-extensions 2>/dev/null | grep -qxi "$ext"; then echo "[!] still present: $ext (close VSCode, re-run: $_code_cli --uninstall-extension $ext --force)"; else echo "[ok] uninstalled: $ext"; fi
+      _out=$("$_c" --uninstall-extension "$ext" --force 2>&1 | grep -vi "not installed" || true)
+      [ -n "$_out" ] && echo "$_out"
+      case "$_out" in
+        *[Bb]uilt-in*) echo "[info] $ext is built-in (VSCode 1.116+): cannot be uninstalled, disabled via settings + auto-update blocked"; continue;;
+      esac
+      if "$_c" --list-extensions 2>/dev/null | grep -qxi "$ext"; then echo "[!] still present ($_c): $ext (close VSCode, re-run: $_c --uninstall-extension $ext --force)"; else echo "[ok] uninstalled ($_c): $ext"; fi
     done
-  else
+  done
+  if [ "$_found_cli" = "0" ]; then
     echo "[!] 'code' CLI not found: removing Copilot extension dirs directly"
   fi
   rm -rf "$HOME"/.vscode/extensions/github.copilot* "$HOME"/.vscode-insiders/extensions/github.copilot* "$HOME"/.vscode-oss/extensions/github.copilot* 2>/dev/null
@@ -164,6 +176,56 @@ if [ "$COPILOT" = "purge" ]; then
   done
   echo "[ok] Copilot data purged"
 fi
+
+# user-level product.json override (no admin): stops VSCode 1.116+ force-reinstalling built-in copilot-chat
+list_bases | while IFS= read -r b; do
+  [ -d "$b" ] || continue
+  python3 -c '
+import json, os, sys, shutil, datetime
+path = os.path.join(sys.argv[1], "product.json")
+data = {}
+try:
+    data = json.load(open(path))
+except Exception:
+    data = {}
+if data.get("builtInExtensionsEnabledWithAutoUpdates") != []:
+    if os.path.exists(path):
+        shutil.copy(path, path + ".bak-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+        print(f"[backup] {path}")
+    data["builtInExtensionsEnabledWithAutoUpdates"] = []
+    json.dump(data, open(path, "w"), indent=2)
+    print(f"[ok] blocked built-in copilot auto-update: {path}")
+else:
+    print(f"[info] auto-update already blocked: {path}")
+' "$b"
+done
+
+# persistent extension disable (same as gear-menu Disable): flips Copilot off in state.vscdb, VSCode already stopped above
+list_bases | while IFS= read -r b; do
+  _db="$b/User/globalStorage/state.vscdb"
+  [ -f "$_db" ] || continue
+  cp -f "$_db" "$_db.bak-$(date +%Y%m%d-%H%M%S)" && echo "[backup] $_db"
+  python3 -c '
+import json, sqlite3, sys
+db = sys.argv[1]
+want = {"github.copilot", "github.copilot-chat"}
+con = sqlite3.connect(db)
+try:
+    row = con.execute("SELECT value FROM ItemTable WHERE key = ?", ("extensionsIdentifiers/disabled",)).fetchone()
+    cur = json.loads(row[0]) if row else []
+    have = {e.get("id", "").lower() for e in cur if isinstance(e, dict)}
+    for ext in sorted(want - have):
+        cur.append({"id": ext})
+    if want - have:
+        con.execute("INSERT OR REPLACE INTO ItemTable(key, value) VALUES (?, ?)", ("extensionsIdentifiers/disabled", json.dumps(cur)))
+        con.commit()
+        print("[ok] Copilot disabled (extension state): " + ", ".join(sorted(want)))
+    else:
+        print("[info] Copilot already disabled (extension state)")
+finally:
+    con.close()
+' "$_db"
+done
 
 for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do
   [ -f "$rc" ] || continue
@@ -188,6 +250,7 @@ except Exception as e:
 changed = False
 for k in ("enableTelemetry", "sendASmile", "aiConfig"):
     if k in data: data[k] = False; changed = True
+if "builtInExtensionsEnabledWithAutoUpdates" in data: data["builtInExtensionsEnabledWithAutoUpdates"] = []; changed = True
 if "telemetryEndpoint" in data: data["telemetryEndpoint"] = ""; changed = True
 if "crashReporter" in data: data["crashReporter"] = {"companyName": "", "productName": ""}; changed = True
 if strict and "extensionsGallery" in data:
@@ -247,10 +310,14 @@ if [ "$OS" != "Darwin" ]; then
         echo "[!] launcher $d not writable (needs sudo), skipping"
       fi
     fi
+    if ! grep -q "disable-extension github.copilot-chat" "$d" 2>/dev/null && [ -w "$d" ]; then
+      sed -i 's|--disable-telemetry|--disable-extension github.copilot --disable-extension github.copilot-chat --disable-telemetry|g' "$d"
+      grep -q "disable-extension github.copilot-chat" "$d" 2>/dev/null && echo "[ok] launcher Copilot disabled: $d"
+    fi
   done
 else
   if command -v code >/dev/null 2>&1 && [ -w /usr/local/bin/code ]; then
-    echo "[info] macOS: add alias: alias code='code --disable-telemetry --disable-experiments --disable-crash-reporter'"
+    echo "[info] macOS: add alias: alias code='code --disable-telemetry --disable-experiments --disable-crash-reporter --disable-extension github.copilot --disable-extension github.copilot-chat'"
   fi
 fi
 

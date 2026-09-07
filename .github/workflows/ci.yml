@@ -23,8 +23,10 @@ jobs:
         run: |
           export FAKEHOME="$(mktemp -d)"
           mkdir -p "$FAKEHOME/.config/Code/User"
-          echo '{"editor.fontSize": 15, "telemetry.telemetryLevel": "error"}' > "$FAKEHOME/.config/Code/User/settings.json"
+          echo '{"editor.fontSize": 15, "telemetry.telemetryLevel": "error", "settingsSync.ignoredExtensions": ["ms-python.python"]}' > "$FAKEHOME/.config/Code/User/settings.json"
           echo '{"foo": 1}' > "$FAKEHOME/.config/Code/argv.json"
+          mkdir -p "$FAKEHOME/.config/Code/User/globalStorage"
+          python3 -c "import sqlite3; con = sqlite3.connect('$FAKEHOME/.config/Code/User/globalStorage/state.vscdb'); con.execute('CREATE TABLE ItemTable(key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB)'); con.execute('INSERT INTO ItemTable(key, value) VALUES (?, ?)', ('extensionsIdentifiers/disabled', '[{\"id\": \"ms-python.python\"}]')); con.commit(); con.close()"
           HOME="$FAKEHOME" NO_HOSTS=1 NO_PRODUCT_PATCH=1 MENU=0 bash vscode-obliterate-trackers.sh
           python3 - "$FAKEHOME" <<'EOF'
           import json, sys
@@ -41,6 +43,15 @@ jobs:
           assert s["github.copilot.nextEditSuggestions.enabled"] is False
           assert s["github.copilot.editor.enableCodeActions"] is False
           assert s["workbench.settings.showAISearchToggle"] is False
+          assert set(["github.copilot", "github.copilot-chat"]) <= set(s["settingsSync.ignoredExtensions"])
+          assert "ms-python.python" in s["settingsSync.ignoredExtensions"], "user sync-ignored list wiped!"
+          pj = json.load(open(home + "/.config/Code/product.json"))
+          assert pj["builtInExtensionsEnabledWithAutoUpdates"] == [], "copilot auto-update not blocked"
+          import sqlite3
+          con = sqlite3.connect(home + "/.config/Code/User/globalStorage/state.vscdb")
+          disabled = {e["id"].lower() for e in json.loads(con.execute("SELECT value FROM ItemTable WHERE key = ?", ("extensionsIdentifiers/disabled",)).fetchone()[0])}
+          assert {"github.copilot", "github.copilot-chat"} <= disabled, "copilot not disabled in state.vscdb"
+          assert "ms-python.python" in disabled, "existing disabled list wiped!"
           assert a["disable-telemetry"] is True and a["enable-crash-reporter"] is False
           assert "marketplace.visualstudio.com" not in json.dumps(s), "NORMAL must not touch the Store"
           print("NORMAL OK")

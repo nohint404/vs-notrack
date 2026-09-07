@@ -93,7 +93,7 @@ powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 -Strict 
 | Telemetry domain DNS blocking | ✅ | ✅ |
 | Outbound firewall rules (Win, admin) | ✅ | ✅ |
 | `--disable-telemetry` launcher/shortcut flags | ✅ | ✅ |
-| Copilot extensions removed + AI features disabled | ✅ | ✅ |
+| Copilot disabled, hidden + reinstall blocked | ✅ | ✅ |
 | **Microsoft extension Store working** | ✅ | ❌ (on purpose) |
 | Marketplace DNS blocking | ❌ | ✅ |
 | Gallery redirected to **Open VSX** | ❌ | ✅ |
@@ -105,7 +105,7 @@ powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 -Strict 
 1. **`settings.json` (merged, never blindly overwritten)** — ~30 killer keys: `telemetry.telemetryLevel: off`, `workbench.enableExperiments: false`, `chat.disableAIFeatures: true`, `chat.agent.enabled: false`, `github.copilot.enable: { "*": false }`, `github.copilot.editor.enableCodeActions: false`, `workbench.settings.showAISearchToggle: false`, `workbench.cloudChanges.autoStore: off`, manual updates, no recommendations, `redhat/dotnet/powershell` opt-outs. Your settings stay intact.
 2. **`argv.json` (runtime kill switch)** — `disable-telemetry`, `disable-experiments`, `enable-crash-reporter: false`. Kicks in before settings are even loaded.
 3. **Persistent env vars** — `VSCODE_TELEMETRY_LEVEL=off`, `DOTNET_CLI_TELEMETRY_OPTOUT=1`, `POWERSHELL_TELEMETRY_OPTOUT=1`, `NEXT_TELEMETRY_DISABLED=1`.
-4. **`product.json`** — neutralizes hardcoded endpoints (`telemetryEndpoint`, `crashReporter`, `sendASmile`). Note: VSCode restores it on update → re-run the script after every update.
+4. **`product.json`** — neutralizes hardcoded endpoints (`telemetryEndpoint`, `crashReporter`, `sendASmile`) and clears `builtInExtensionsEnabledWithAutoUpdates` so VSCode 1.116+ stops force-reinstalling built-in Copilot Chat (plus a per-user `product.json` override that needs no admin). Note: VSCode restores the install-dir file on update → re-run the script after every update.
 5. **DNS blocking (`hosts`)** — 13 telemetry domains. Never the Marketplace in NORMAL.
 6. **Outbound firewall (Windows, admin)** — second wall for `Code.exe`.
 7. **Cleanup** — wipes `Crash Reports`, `CachedData`, logs and `*telemetry*/*crash*` leftovers + disables auto-update scheduled tasks (Win).
@@ -157,7 +157,7 @@ Yes, updates can restore `product.json` and scheduled tasks. Your `settings.json
 Yes, both scripts lock down Stable + Insiders.
 
 **Copilot is still visible after running the script?**
-The Chat panel is built into VSCode, so it can't be uninstalled — the script hides/disables it (`chat.disableAIFeatures`, `chat.agent.enabled`) and uninstalls the `github.copilot` / `github.copilot-chat` extensions. If the icon is still there: close VSCode completely and re-run (a running VSCode locks extension files and blocks removal).
+The Chat panel is built into VSCode, and since 1.116 `GitHub.copilot-chat` itself is a **built-in** extension: `code --uninstall-extension` refuses with *Built-in extension and cannot be uninstalled*, and VSCode re-downloads it on every launch (`builtInExtensionsEnabledWithAutoUpdates`) — even `extensions.autoUpdate: false` doesn't stop it. Full removal is impossible by design; the script does the supported maximum: disables + hides everything (`chat.disableAIFeatures`, `chat.agent.enabled`), uninstalls what is uninstallable (`github.copilot`), excludes Copilot from Settings Sync, and blocks the force-reinstall (`builtInExtensionsEnabledWithAutoUpdates: []`, user-level override, no admin). Plus: both extensions are also switched off directly (like the gear-menu Disable) via a persistent flag in `state.vscdb` plus `--disable-extension` launcher flags, so it holds even on older VSCode without `chat.disableAIFeatures`.
 
 **What about closed-source third-party extensions?**
 No script can guarantee what a closed binary does. Rule of thumb: few extensions, open-source whenever possible, in STRICT only from Open VSX.

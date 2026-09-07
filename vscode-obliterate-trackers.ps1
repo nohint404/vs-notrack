@@ -26,8 +26,12 @@ if (-not $isAdmin) {
   Write-Host "    Re-run as Administrator for hosts + firewall." -ForegroundColor Yellow
 }
 
-Get-Process Code, 'Visual Studio Code' -ErrorAction SilentlyContinue | Stop-Process -Force
-Start-Sleep -Milliseconds 300
+$vsProcs = Get-Process Code, 'Visual Studio Code' -ErrorAction SilentlyContinue
+if ($vsProcs) {
+  $vsProcs | Stop-Process -Force
+  try { $vsProcs | Wait-Process -Timeout 15 -ErrorAction Stop } catch { }
+  Start-Sleep -Milliseconds 500
+}
 
 $codeDirs = @("$env:APPDATA\Code", "$env:APPDATA\Code - Insiders")
 foreach ($base in $codeDirs) {
@@ -89,6 +93,10 @@ foreach ($base in $codeDirs) {
     try { $settings = Get-Content $SettingsPath -Raw | ConvertFrom-Json -AsHashtable } catch { $settings = @{} }
   }
   foreach ($k in $killer.Keys) { $settings[$k] = $killer[$k] }
+  $syncSkip = @('github.copilot', 'github.copilot-chat')
+  $curIgnored = @()
+  if ($settings.Contains('settingsSync.ignoredExtensions') -and ($settings['settingsSync.ignoredExtensions'] -is [array])) { $curIgnored = $settings['settingsSync.ignoredExtensions'] }
+  $settings['settingsSync.ignoredExtensions'] = @($curIgnored + $syncSkip | Select-Object -Unique | Sort-Object)
   $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsPath -Encoding UTF8
   Write-Host "[ok] hardened: $SettingsPath" -ForegroundColor Green
 
@@ -124,6 +132,7 @@ if (-not $NoProductPatch) {
       foreach ($key in @('enableTelemetry', 'sendASmile', 'aiConfig')) {
         if ($pj.ContainsKey($key)) { $pj[$key] = $false; $changed = $true }
       }
+      if ($pj.ContainsKey('builtInExtensionsEnabledWithAutoUpdates')) { $pj['builtInExtensionsEnabledWithAutoUpdates'] = @(); $changed = $true }
       if ($pj.ContainsKey('telemetryEndpoint')) { $pj['telemetryEndpoint'] = ''; $changed = $true }
       if ($pj.ContainsKey('crashReporter')) {
         $pj['crashReporter'] = @{ companyName = ''; productName = '' }; $changed = $true
@@ -225,14 +234,21 @@ Get-ScheduledTask -TaskName '*VSCode*Update*' -ErrorAction SilentlyContinue |
   Disable-ScheduledTask -ErrorAction SilentlyContinue | Out-Null
 
 if ($PurgeCopilot) {
-  $codeCli = @('code', 'code-insiders', 'codium') | Where-Object { Get-Command $_ -ErrorAction SilentlyContinue } | Select-Object -First 1
-  if ($codeCli) {
-    foreach ($ext in @('github.copilot', 'github.copilot-chat')) {
-      & $codeCli --uninstall-extension $ext --force 2>&1 | Where-Object { $_ -notmatch 'not installed' }
-      if (& $codeCli --list-extensions 2>$null | Select-String -Quiet -Pattern "^$([regex]::Escape($ext))$") {
-        Write-Host "[!] still present: $ext (close VSCode, re-run: $codeCli --uninstall-extension $ext --force)" -ForegroundColor Yellow
-      } else {
-        Write-Host "[ok] uninstalled: $ext" -ForegroundColor Green
+  $codeClis = @('code', 'code-insiders', 'codium') | Where-Object { Get-Command $_ -ErrorAction SilentlyContinue }
+  if ($codeClis) {
+    foreach ($cli in $codeClis) {
+      foreach ($ext in @('github.copilot', 'github.copilot-chat')) {
+        $out = @(& $cli --uninstall-extension $ext --force 2>&1 | Where-Object { $_ -notmatch 'not installed' })
+        if ($out) { $out | ForEach-Object { Write-Host "$_" } }
+        if ($out -match 'built-in') {
+          Write-Host "[info] $ext is built-in (VSCode 1.116+): cannot be uninstalled, disabled via settings + auto-update blocked" -ForegroundColor Cyan
+          continue
+        }
+        if (& $cli --list-extensions 2>$null | Select-String -Quiet -Pattern "^$([regex]::Escape($ext))$") {
+          Write-Host "[!] still present ($cli): $ext (close VSCode, re-run: $cli --uninstall-extension $ext --force)" -ForegroundColor Yellow
+        } else {
+          Write-Host "[ok] uninstalled ($cli): $ext" -ForegroundColor Green
+        }
       }
     }
   } else {
@@ -252,14 +268,35 @@ if ($PurgeCopilot) {
   }
 }
 
-$flags = ' --disable-telemetry --disable-experiments --disable-crash-reporter'
+# user-level product.json override (no admin): stops VSCode 1.116+ force-reinstalling built-in copilot-chat
+foreach ($base in $codeDirs) {
+  if (-not (Test-Path $base)) { continue }
+  $pp = Join-Path $base 'product.json'
+  $pj = @{}
+  if (Test-Path $pp) {
+    try { $pj = Get-Content $pp -Raw | ConvertFrom-Json -AsHashtable } catch { $pj = @{} }
+  }
+  $cur = $pj['builtInExtensionsEnabledWithAutoUpdates']
+  if (-not ($cur -is [array] -and $cur.Count -eq 0)) {
+    if (Test-Path $pp) { Copy-Item $pp "$pp.bak-$(Get-Date -Format 'yyyyMMdd-HHmmss')" -Force }
+    $pj['builtInExtensionsEnabledWithAutoUpdates'] = @()
+    $pj | ConvertTo-Json -Depth 20 | Set-Content $pp -Encoding UTF8
+    Write-Host "[ok] blocked built-in copilot auto-update: $pp" -ForegroundColor Green
+  } else {
+    Write-Host "[info] auto-update already blocked: $pp" -ForegroundColor DarkGray
+  }
+}
+
+$flags = ' --disable-telemetry --disable-experiments --disable-crash-reporter --disable-extension github.copilot --disable-extension github.copilot-chat'
+$copilotFlags = ' --disable-extension github.copilot --disable-extension github.copilot-chat'
 $links = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Visual Studio Code*.lnk" -ErrorAction SilentlyContinue
 foreach ($l in $links) {
   try {
     $sh = New-Object -ComObject WScript.Shell
     $sc = $sh.CreateShortcut($l.FullName)
-    if ($sc.Arguments -notmatch 'disable-telemetry') {
-      $sc.Arguments += $flags
+    if ($sc.Arguments -notmatch 'disable-extension github\.copilot-chat') {
+      if ($sc.Arguments -notmatch 'disable-telemetry') { $sc.Arguments += $flags }
+      else { $sc.Arguments += $copilotFlags }
       $sc.Save()
       Write-Host "[ok] patched shortcut: $($l.Name)" -ForegroundColor Green
     }
