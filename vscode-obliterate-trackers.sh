@@ -7,7 +7,7 @@ NO_HOSTS="${NO_HOSTS:-0}"
 NO_PRODUCT_PATCH="${NO_PRODUCT_PATCH:-0}"
 MENU="${MENU:-1}"
 MODE_OPT="${MODE_OPT:-}"
-COPILOT="${COPILOT:-keep}"
+COPILOT="${COPILOT:-purge}"
 
 if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
   SUDO_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
@@ -43,11 +43,11 @@ if [ "$MENU" = "1" ] && can_prompt; then
   if [ "$m" = "2" ]; then STRICT=1; elif [ -n "$m" ]; then STRICT=0; fi
   echo ""
   menu_head "vs-notrack: copilot cleanup"
-  printf '  %s[1] KEEP%s  %s- disabled, stays installed (default)%s\n' "$C_G" "$C_0" "$C_D" "$C_0"
+  printf '  %s[1] PURGE%s  %s- remove extensions + data (default)%s\n' "$C_R" "$C_0" "$C_D" "$C_0"
   printf '  %s[2] UNINSTALL%s  %s- remove extensions%s\n' "$C_Y" "$C_0" "$C_D" "$C_0"
-  printf '  %s[3] PURGE%s  %s- remove extensions + data%s\n' "$C_R" "$C_0" "$C_D" "$C_0"
+  printf '  %s[3] KEEP%s  %s- disabled, stays installed%s\n' "$C_G" "$C_0" "$C_D" "$C_0"
   printf "Choice [1/2/3]: "; c=""; tread c
-  case "$c" in 2) COPILOT=uninstall;; 3) COPILOT=purge;; *) COPILOT=keep;; esac
+  case "$c" in 2) COPILOT=uninstall;; 3) COPILOT=keep;; *) COPILOT=purge;; esac
 fi
 
 if [ "$STRICT" = "1" ]; then MODE="STRICT (zero Microsoft)"; else MODE="NORMAL (store working)"; fi
@@ -94,7 +94,9 @@ killer = {
   "redhat.telemetry.enabled": False,
   "dotnetAcquisitionExtension.enableTelemetry": False,
   "powershell.telemetry.enabled": False,
-  "github.copilot.enable": False,
+  "chat.disableAIFeatures": True,
+  "github.copilot.enable": {"*": False},
+  "github.copilot.nextEditSuggestions.enabled": False,
   "chat.commandCenter.enabled": False,
   "inlineChat.holdToSpeak.enabled": False,
 }
@@ -141,15 +143,16 @@ if [ "$COPILOT" = "uninstall" ] || [ "$COPILOT" = "purge" ]; then
       if code --list-extensions 2>/dev/null | grep -qxi "$ext"; then echo "[info] still present (built-in?): $ext"; else echo "[ok] uninstalled: $ext"; fi
     done
   else
-    echo "[!] 'code' CLI not found: skipping extension uninstall"
+    echo "[!] 'code' CLI not found: removing Copilot extension dirs directly"
   fi
+  rm -rf "$HOME"/.vscode/extensions/github.copilot* "$HOME"/.vscode-insiders/extensions/github.copilot* 2>/dev/null
 fi
 
 if [ "$COPILOT" = "purge" ]; then
   list_bases | while IFS= read -r b; do
     rm -rf "$b"/User/globalStorage/github.copilot* 2>/dev/null
   done
-  echo "[ok] Copilot data purged"
+  echo "[ok] Copilot extensions/data purged"
 fi
 
 for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do

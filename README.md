@@ -29,7 +29,7 @@ curl -fsSL https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-ob
 curl -fsSL https://cdn.jsdelivr.net/gh/nohint404/vs-notrack@main/vscode-obliterate-trackers.sh | bash
 ```
 
-Running it from a terminal opens an interactive menu: pick NORMAL vs STRICT lockdown, then choose what to do with Copilot (keep disabled / uninstall / uninstall + purge data). Non-interactive shells (CI, no TTY) automatically use safe defaults; every choice is also scriptable via env vars (see table below).
+Running it from a terminal opens an interactive menu: pick NORMAL vs STRICT lockdown, then choose what to do with Copilot (purge / uninstall / keep disabled). Non-interactive shells (CI, no TTY) purge Copilot by default; every choice is also scriptable via env vars (see table below).
 
 Or the classic way:
 
@@ -43,8 +43,9 @@ sudo ./vscode-obliterate-trackers.sh         # + /etc/hosts blocking
 | Env var | Effect |
 |---------|--------|
 | `STRICT=1` | Also blocks the MS Marketplace + points the gallery to Open VSX |
+| `COPILOT=purge` | Default. Uninstalls Copilot extensions + deletes their leftover data |
 | `COPILOT=uninstall` | Uninstalls Copilot extensions (`github.copilot`, `github.copilot-chat`) |
-| `COPILOT=purge` | Uninstalls Copilot extensions + deletes their leftover data |
+| `COPILOT=keep` | Keeps Copilot installed, but disables AI features in settings |
 | `MODE_OPT=strict` / `normal` | Scriptable alternative to `STRICT=1` / unset |
 | `MENU=0` | Skips the interactive menu (uses env/defaults) |
 | `NO_HOSTS=1` | Skips `/etc/hosts` modification |
@@ -72,7 +73,8 @@ powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 -Strict 
 | Flag | Effect |
 |------|--------|
 | `-Strict` | Also blocks the MS Marketplace + points the gallery to Open VSX |
-| `-PurgeCopilot` | Uninstalls Copilot extensions + deletes their leftover data |
+| `-PurgeCopilot` | Default. Uninstalls Copilot extensions + deletes their leftover data |
+| `-KeepCopilot` | Keeps Copilot installed, but disables AI features in settings |
 | `-NoHosts` | Skips `hosts` file modification |
 | `-NoFirewall` | Skips outbound firewall rules |
 | `-NoProductPatch` | Skips `product.json` neutralization |
@@ -99,7 +101,7 @@ powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 -Strict 
 
 ## 🛡️ What it does, layer by layer
 
-1. **`settings.json` (merged, never blindly overwritten)** — ~25 killer keys: `telemetry.telemetryLevel: off`, `workbench.enableExperiments: false`, `telemetry.feedback.enabled: false`, `workbench.cloudChanges.autoStore: off`, manual updates, no recommendations, `redhat/dotnet/powershell/copilot/chat` opt-outs. Your settings stay intact.
+1. **`settings.json` (merged, never blindly overwritten)** — ~25 killer keys: `telemetry.telemetryLevel: off`, `workbench.enableExperiments: false`, `chat.disableAIFeatures: true`, `github.copilot.enable: { "*": false }`, `workbench.cloudChanges.autoStore: off`, manual updates, no recommendations, `redhat/dotnet/powershell` opt-outs. Your settings stay intact.
 2. **`argv.json` (runtime kill switch)** — `disable-telemetry`, `disable-experiments`, `enable-crash-reporter: false`. Kicks in before settings are even loaded.
 3. **Persistent env vars** — `VSCODE_TELEMETRY_LEVEL=off`, `DOTNET_CLI_TELEMETRY_OPTOUT=1`, `POWERSHELL_TELEMETRY_OPTOUT=1`, `NEXT_TELEMETRY_DISABLED=1`.
 4. **`product.json`** — neutralizes hardcoded endpoints (`telemetryEndpoint`, `crashReporter`, `sendASmile`). Note: VSCode restores it on update → re-run the script after every update.

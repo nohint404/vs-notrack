@@ -1,15 +1,18 @@
 ﻿#Requires -Version 5.1
-# vs-notrack - Windows. Usage: powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 [-Strict] [-PurgeCopilot] [-NoHosts] [-NoFirewall] [-NoProductPatch]
+# vs-notrack - Windows. Usage: powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 [-Strict] [-KeepCopilot] [-NoHosts] [-NoFirewall] [-NoProductPatch]
 [CmdletBinding()]
 param(
   [switch]$Strict,
   [switch]$NoHosts,
   [switch]$NoFirewall,
   [switch]$NoProductPatch,
+  [switch]$KeepCopilot,
   [switch]$PurgeCopilot
 )
 if ($env:VSCODE_OBLITERATOR_STRICT -eq '1') { $Strict = $true }
+if ($env:VSCODE_OBLITERATOR_KEEPCOPILOT -eq '1') { $KeepCopilot = $true }
 if ($env:VSCODE_OBLITERATOR_PURGECOPILOT -eq '1') { $PurgeCopilot = $true }
+if ($KeepCopilot) { $PurgeCopilot = $false } else { $PurgeCopilot = $true }
 
 $ErrorActionPreference = 'SilentlyContinue'
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -65,7 +68,9 @@ foreach ($base in $codeDirs) {
     'redhat.telemetry.enabled'                              = $false
     'dotnetAcquisitionExtension.enableTelemetry'            = $false
     'powershell.telemetry.enabled'                          = $false
-    'github.copilot.enable'                                 = $false
+    'chat.disableAIFeatures'                                = $true
+    'github.copilot.enable'                                 = @{ '*' = $false }
+    'github.copilot.nextEditSuggestions.enabled'            = $false
     'chat.commandCenter.enabled'                            = $false
     'inlineChat.holdToSpeak.enabled'                        = $false
     'workbench.experimental.editSessions.enabled'           = $false
@@ -229,11 +234,13 @@ if ($PurgeCopilot) {
   } else {
     Write-Host "[!] 'code' CLI not found: skipping Copilot uninstall." -ForegroundColor Yellow
   }
+  Get-ChildItem "$env:USERPROFILE\.vscode\extensions", "$env:USERPROFILE\.vscode-insiders\extensions" -Directory -Filter 'github.copilot*' -ErrorAction SilentlyContinue |
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
   foreach ($base in $codeDirs) {
     Get-ChildItem "$base\User\globalStorage" -Directory -Filter 'github.copilot*' -ErrorAction SilentlyContinue |
       Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
   }
-  Write-Host '[ok] Copilot data purged' -ForegroundColor Green
+  Write-Host '[ok] Copilot extensions/data purged' -ForegroundColor Green
 }
 
 $flags = ' --disable-telemetry --disable-experiments --disable-crash-reporter'
