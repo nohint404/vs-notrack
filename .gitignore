@@ -1,0 +1,8 @@
+# backup timestampati creati dagli script
+*.bak-*
+# sistema
+.DS_Store
+Thumbs.db
+# python
+__pycache__/
+*.pyc
