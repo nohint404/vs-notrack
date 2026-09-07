@@ -66,13 +66,18 @@ jobs:
       - name: PS probe (temporary diagnostics)
         shell: powershell
         run: |
-          $all = Get-Content .\vscode-obliterate-trackers.ps1
-          foreach ($n in @(185, 195, 205, 215, 225, 235, 245, 250, 253)) {
+          function Test-Snip($name, $src) {
             $t = $null; $e = $null
-            [void][System.Management.Automation.Language.Parser]::ParseInput((($all | Select-Object -First $n) -join "`n"), [ref]$t, [ref]$e)
-            Write-Host "PREFIX first ${n}: $($e.Count) errors"
+            [void][System.Management.Automation.Language.Parser]::ParseInput($src, [ref]$t, [ref]$e)
+            Write-Host "SNIP ${name}: $($e.Count) errors"
             $e | ForEach-Object { Write-Host "  -> line $($_.Extent.StartLineNumber): $($_.Message)" }
           }
+          Test-Snip 'l248-exact' 'Write-Host "[ok] patched shortcut: $($l.Name)" -ForegroundColor Green'
+          Test-Snip 'lsub-min' 'Write-Host "x $($l.Name) y"'
+          Test-Snip 'assign-sub' '$x = "$($l.Name)"'
+          Test-Snip 'multiletter' 'Write-Host "x $($link.Name) y"'
+          Test-Snip 'nosub' 'Write-Host "[ok] patched shortcut: $l"'
+          Test-Snip 'l254-exact' 'Write-Host "`nOBLITERATED [$mode] in $($stopwatch.ElapsedMilliseconds) ms. Restart VSCode."'
 
       - name: PowerShell syntax check (no execution)
         shell: powershell
