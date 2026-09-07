@@ -67,17 +67,14 @@ jobs:
         shell: powershell
         run: |
           $all = Get-Content .\vscode-obliterate-trackers.ps1
-          function Test-Cut($name, $a, $b) {
+          foreach ($n in @(250, 240, 230, 220, 210, 200, 190, 180, 170, 150, 120, 90, 60, 30)) {
             $t = $null; $e = $null
-            $src = @(if ($a -gt 0) { $all[0..($a-1)] }; $all[$b..($all.Count-1)]) -join "`n"
-            [void][System.Management.Automation.Language.Parser]::ParseInput($src, [ref]$t, [ref]$e)
-            Write-Host "CUT ${name}: $($e.Count) errors"
-            $e | ForEach-Object { Write-Host "  -> line $($_.Extent.StartLineNumber): $($_.Message)" }
+            $seg = $all[($n-1)..($all.Count-1)] -join "`n"
+            [void][System.Management.Automation.Language.Parser]::ParseInput($seg, [ref]$t, [ref]$e)
+            $str = @($e | Where-Object { $_.Message -like '*terminator*' })
+            Write-Host "SEG from ${n}: $($str.Count) string-errors"
+            $str | ForEach-Object { Write-Host "  -> rel-line $($_.Extent.StartLineNumber): $($_.FullyQualifiedErrorId)" }
           }
-          Test-Cut 'no-purge-219-237' 218 237
-          Test-Cut 'no-firewallwipe-184-217' 183 217
-          Test-Cut 'no-shortcuts-239-251' 238 251
-          Test-Cut 'no-hosts-165-182' 164 182
 
       - name: PowerShell syntax check (no execution)
         shell: powershell
