@@ -24,6 +24,9 @@ curl -fsSL https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-ob
 
 # With /etc/hosts DNS blocking (needs sudo)
 curl -fsSL https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-obliterate-trackers.sh | sudo bash
+
+# Mirror (if raw.githubusercontent.com doesn't resolve on your network)
+curl -fsSL https://cdn.jsdelivr.net/gh/nohint404/vs-notrack@main/vscode-obliterate-trackers.sh | bash
 ```
 
 Or the classic way:
