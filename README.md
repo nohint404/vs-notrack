@@ -4,88 +4,100 @@
 ![platform](https://img.shields.io/badge/OS-Windows%20%7C%20Linux%20%7C%20macOS-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
-**Il tuo PC. Il tuo editor. Le tue regole.**
-`vs-notrack` ammazza telemetria, crash reporter, experiments, feedback e cloud-sync di VSCode — in meno di 2 secondi, con backup automatico. Siamo noi a dominare su Microsoft, non il contrario.
+**Your PC. Your editor. Your rules.**
+`vs-notrack` kills VSCode telemetry, crash reporter, experiments, feedback and cloud sync — in under 2 seconds, with automatic backups.
 
-> ⚠️ Onestà prima di tutto: lo **Store estensioni Microsoft traccia per natura** (IP + download, come qualsiasi server). In modalità `NORMAL` lo Store resta attivo ma VSCode smette di spiarti. Solo la modalità `STRICT` porta i contatti MS a **zero** — al prezzo di usare lo store libero [Open VSX](https://open-vsx.org).
+> ⚠️ Honesty first: the **Microsoft extension Marketplace tracks by design** (IP + downloads, like any server). `NORMAL` mode keeps the Store working while VSCode stops spying on you. Only `STRICT` mode brings Microsoft contacts to **zero** — at the cost of switching to the free [Open VSX](https://open-vsx.org) store.
 
 ---
 
-## 🚀 Uso rapido
+## 🚀 One-liner install (curl)
+
+### Linux / macOS
+
+```bash
+# NORMAL — anti-tracking, Store keeps working (recommended)
+curl -fsSL https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-obliterate-trackers.sh | bash
+
+# STRICT ☠️ — zero Microsoft, MS Store dies, Open VSX is used instead
+curl -fsSL https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-obliterate-trackers.sh | STRICT=1 bash
+
+# With /etc/hosts DNS blocking (needs sudo)
+curl -fsSL https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-obliterate-trackers.sh | sudo bash
+```
+
+Or the classic way:
+
+```bash
+chmod +x vscode-obliterate-trackers.sh
+./vscode-obliterate-trackers.sh              # NORMAL
+STRICT=1 ./vscode-obliterate-trackers.sh     # STRICT ☠️
+sudo ./vscode-obliterate-trackers.sh         # + /etc/hosts blocking
+```
+
+| Env var | Effect |
+|---------|--------|
+| `STRICT=1` | Also blocks the MS Marketplace + points the gallery to Open VSX |
+| `NO_HOSTS=1` | Skips `/etc/hosts` modification |
+| `NO_PRODUCT_PATCH=1` | Skips `product.json` neutralization |
 
 ### Windows (PowerShell)
 
 ```powershell
-# NORMAL — anti-tracciamento, Store attivo (consigliato)
-powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1
+# NORMAL — anti-tracking, Store keeps working (recommended)
+irm https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-obliterate-trackers.ps1 | iex
 
-# STRICT ☠️ — zero Microsoft, Store MS morto, si usa Open VSX
-powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 -Strict
+# STRICT ☠️ — zero Microsoft, MS Store dies, Open VSX is used instead
+$env:VSCODE_OBLITERATOR_STRICT=1; irm https://raw.githubusercontent.com/nohint404/vs-notrack/main/vscode-obliterate-trackers.ps1 | iex
 ```
 
-> 💡 Esegui come **Amministratore** per attivare anche blocco `hosts` + firewall. Senza admin, settings/argv/env vengono blindati comunque.
+Or from a local copy:
 
-| Flag | Effetto |
-|------|---------|
-| `-Strict` | Blocca anche il Marketplace MS + punta la gallery a Open VSX |
-| `-NoHosts` | Salta la modifica del file `hosts` |
-| `-NoFirewall` | Salta le regole firewall outbound |
-| `-NoProductPatch` | Salta la neutralizzazione di `product.json` |
-
-### Linux / macOS (bash)
-
-```bash
-chmod +x vscode-obliterate-trackers.sh
-
-# NORMAL — anti-tracciamento, Store attivo (consigliato)
-./vscode-obliterate-trackers.sh
-
-# STRICT ☠️ — zero Microsoft, Store MS morto, si usa Open VSX
-STRICT=1 ./vscode-obliterate-trackers.sh
-
-# Con blocco /etc/hosts (serve sudo)
-sudo ./vscode-obliterate-trackers.sh
-# oppure STRICT + sudo:
-sudo STRICT=1 ./vscode-obliterate-trackers.sh
+```powershell
+powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1          # NORMAL
+powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 -Strict  # STRICT ☠️
 ```
 
-| Variabile | Effetto |
-|-----------|---------|
-| `STRICT=1` | Blocca anche il Marketplace MS + gallery su Open VSX |
-| `NO_HOSTS=1` | Salta la modifica di `/etc/hosts` |
-| `NO_PRODUCT_PATCH=1` | Salta la neutralizzazione di `product.json` |
+> 💡 Run as **Administrator** to also enable `hosts` + firewall blocking. Without admin, settings/argv/env are still locked down.
+
+| Flag | Effect |
+|------|--------|
+| `-Strict` | Also blocks the MS Marketplace + points the gallery to Open VSX |
+| `-NoHosts` | Skips `hosts` file modification |
+| `-NoFirewall` | Skips outbound firewall rules |
+| `-NoProductPatch` | Skips `product.json` neutralization |
 
 ---
 
 ## ⚔️ NORMAL vs STRICT
 
-| Cosa | NORMAL | STRICT ☠️ |
+| What | NORMAL | STRICT ☠️ |
 |------|:------:|:---------:|
-| Telemetria VSCode (`telemetryLevel: off`) | ✅ | ✅ |
+| VSCode telemetry (`telemetryLevel: off`) | ✅ | ✅ |
 | Crash reporter / experiments / feedback | ✅ | ✅ |
-| Edit Sessions cloud / cloudChanges | ✅ | ✅ |
-| Telemetria estensioni MS (Python, C#, PowerShell…) | ✅ | ✅ |
-| Neutralizzazione `product.json` | ✅ | ✅ |
-| Blocco DNS domini telemetria | ✅ | ✅ |
-| Regole firewall outbound (Win, admin) | ✅ | ✅ |
-| Flag `--disable-telemetry` su launcher/scorciatoie | ✅ | ✅ |
-| **Store estensioni Microsoft funzionante** | ✅ | ❌ (voluto) |
-| Blocco DNS anche del Marketplace | ❌ | ✅ |
-| Gallery reindirizzata su **Open VSX** | ❌ | ✅ |
+| Cloud Edit Sessions / cloudChanges | ✅ | ✅ |
+| MS extension telemetry (Python, C#, PowerShell…) | ✅ | ✅ |
+| `product.json` neutralization | ✅ | ✅ |
+| Telemetry domain DNS blocking | ✅ | ✅ |
+| Outbound firewall rules (Win, admin) | ✅ | ✅ |
+| `--disable-telemetry` launcher/shortcut flags | ✅ | ✅ |
+| **Microsoft extension Store working** | ✅ | ❌ (on purpose) |
+| Marketplace DNS blocking | ❌ | ✅ |
+| Gallery redirected to **Open VSX** | ❌ | ✅ |
 
 ---
 
-## 🛡️ Cosa fa, livello per livello
+## 🛡️ What it does, layer by layer
 
-1. **`settings.json` (merge, mai sovrascritto)** — ~25 chiavi killer: `telemetry.telemetryLevel: off`, `workbench.enableExperiments: false`, `telemetry.feedback.enabled: false`, `workbench.cloudChanges.autoStore: off`, update manuali, niente recommendations, opt-out `redhat/dotnet/powershell/copilot/chat`. Le tue impostazioni restano intatte.
-2. **`argv.json` (kill switch runtime)** — `disable-telemetry`, `disable-experiments`, `enable-crash-reporter: false`. Agisce prima ancora che le impostazioni vengano caricate.
-3. **Variabili d'ambiente persistenti** — `VSCODE_TELEMETRY_LEVEL=off`, `DOTNET_CLI_TELEMETRY_OPTOUT=1`, `POWERSHELL_TELEMETRY_OPTOUT=1`, `NEXT_TELEMETRY_DISABLED=1`.
-4. **`product.json`** — neutralizza endpoint hardcoded (`telemetryEndpoint`, `crashReporter`, `sendASmile`). Nota: VSCode lo sovrascrive agli update → rilancia lo script dopo ogni aggiornamento.
-5. **Blocco DNS (`hosts`)** — 13 domini telemetria. Mai il Marketplace in NORMAL.
-6. **Firewall outbound (Windows, admin)** — seconda muraglia per `Code.exe`.
-7. **Pulizia** — spazza via `Crash Reports`, `CachedData`, log e file `*telemetry*/*crash*` esistenti + disattiva i task schedulati di auto-update (Win).
+1. **`settings.json` (merged, never blindly overwritten)** — ~25 killer keys: `telemetry.telemetryLevel: off`, `workbench.enableExperiments: false`, `telemetry.feedback.enabled: false`, `workbench.cloudChanges.autoStore: off`, manual updates, no recommendations, `redhat/dotnet/powershell/copilot/chat` opt-outs. Your settings stay intact.
+2. **`argv.json` (runtime kill switch)** — `disable-telemetry`, `disable-experiments`, `enable-crash-reporter: false`. Kicks in before settings are even loaded.
+3. **Persistent env vars** — `VSCODE_TELEMETRY_LEVEL=off`, `DOTNET_CLI_TELEMETRY_OPTOUT=1`, `POWERSHELL_TELEMETRY_OPTOUT=1`, `NEXT_TELEMETRY_DISABLED=1`.
+4. **`product.json`** — neutralizes hardcoded endpoints (`telemetryEndpoint`, `crashReporter`, `sendASmile`). Note: VSCode restores it on update → re-run the script after every update.
+5. **DNS blocking (`hosts`)** — 13 telemetry domains. Never the Marketplace in NORMAL.
+6. **Outbound firewall (Windows, admin)** — second wall for `Code.exe`.
+7. **Cleanup** — wipes `Crash Reports`, `CachedData`, logs and `*telemetry*/*crash*` leftovers + disables auto-update scheduled tasks (Win).
 
-### Domini bloccati (sempre)
+### Blocked domains (always)
 
 ```
 vortex.data.microsoft.com · vortex-win.data.microsoft.com
@@ -96,53 +108,56 @@ dc.applicationinsights.microsoft.com · mobile.events.data.microsoft.com
 events.data.microsoft.com · crl.microsoft.com · functionschina.azurecomm.net
 ```
 
-Solo in STRICT si aggiungono: `marketplace.visualstudio.com`, `vscode.blob.core.windows.net`, `vscode-update.azurewebsites.net`, `update.code.visualstudio.com`.
+STRICT adds: `marketplace.visualstudio.com`, `vscode.blob.core.windows.net`, `vscode-update.azurewebsites.net`, `update.code.visualstudio.com`.
 
 ---
 
-## ✅ Verifica (30 secondi)
+## ✅ Verify (30 seconds)
 
-1. Riapri VSCode → Impostazioni → cerca `telemetry` → deve dire **OFF**.
-2. `Help → Toggle Developer Tools → Network` → ricarica: zero chiamate a `vortex` / `applicationinsights` / `events.data`.
-3. Controlla il backup: accanto a ogni file modificato trovi `settings.json.bak-<data>` — rollback = rinomina il `.bak`.
+1. Reopen VSCode → Settings → search `telemetry` → must say **OFF**.
+2. `Help → Toggle Developer Tools → Network` → reload: zero calls to `vortex` / `applicationinsights` / `events.data`.
+3. Check the backup: next to every modified file you'll find `settings.json.bak-<date>` — rollback = rename the `.bak` back.
 
 ---
 
 ## ↩️ Rollback
 
-Ogni file toccato ha un backup timestampato nella stessa cartella:
+Every touched file gets a timestamped backup in the same folder:
 
 - Windows: `%APPDATA%\Code\User\settings.json.bak-*`, `%APPDATA%\Code\argv.json.bak-*`
 - Linux: `~/.config/Code/User/settings.json.bak-*`, `~/.config/Code/argv.json.bak-*`
 - macOS: `~/Library/Application Support/Code/User/settings.json.bak-*`
 
-Per tornare indietro: chiudi VSCode, cancella il file modificato, rinomina il `.bak` più recente. Per il file `hosts`, rimuovi le righe marcate `# vscode-obliterator`.
+To revert: close VSCode, delete the modified file, rename the newest `.bak` back. For the `hosts` file, remove the lines tagged `# vscode-obliterator`.
 
 ---
 
 ## ❓ FAQ
 
-**Lo Store estensioni continua a funzionare?**
-Sì in NORMAL. No in STRICT (di proposito — usa [open-vsx.org](https://open-vsx.org) o `code --install-extension file.vsix`).
+**Does the extension Store keep working?**
+Yes in NORMAL. No in STRICT (on purpose — use [open-vsx.org](https://open-vsx.org) or `code --install-extension file.vsix`).
 
-**Devo rilanciarlo dopo gli update di VSCode?**
-Sì, gli update possono ripristinare `product.json` e i task schedulati. Le tue `settings.json`/`argv.json` invece sopravvivono.
+**Must I re-run it after VSCode updates?**
+Yes, updates can restore `product.json` and scheduled tasks. Your `settings.json`/`argv.json` survive updates.
 
-**Copre anche VSCode Insiders?**
-Sì, entrambi gli script blindano Stable + Insiders.
+**Does it cover VSCode Insiders?**
+Yes, both scripts lock down Stable + Insiders.
 
-**E le estensioni di terze parti closed-source?**
-Nessuno script può garantire cosa fa un binario chiuso. Regola d'oro: poche estensioni, solo open-source quando possibile, in STRICT solo da Open VSX.
+**What about closed-source third-party extensions?**
+No script can guarantee what a closed binary does. Rule of thumb: few extensions, open-source whenever possible, in STRICT only from Open VSX.
 
-**Voglio proprio zero Microsoft, punto.**
-`STRICT=1` + valuta [VSCodium](https://vscodium.com) (build senza telemetria by-design) con Open VSX. Questo script resta utile anche lì come cintura di sicurezza.
+**I want zero Microsoft, period.**
+`STRICT=1` + consider [VSCodium](https://vscodium.com) (telemetry-free build by design) with Open VSX. This script is still useful there as a safety belt.
+
+**Is piping curl to bash safe here?**
+The shell script reads nothing from stdin (no heredocs, no prompts), so `curl | bash` is safe by construction. Pin to a commit for extra paranoia: replace `/main/` in the URL with `/<commit-sha>/`.
 
 ---
 
-## 🤝 Contribuire
+## 🤝 Contributing
 
-PR benvenute! Il workflow CI (`.github/workflows/ci.yml`) testa tutto in automatico: shellcheck + test funzionale su HOME finta + parsing PowerShell su runner Windows. Se aggiungi domini o chiavi, aggiorna README + entrambi gli script.
+PRs welcome! The CI workflow (`.github/workflows/ci.yml`) tests everything automatically: shellcheck + functional test on a fake HOME + PowerShell parsing on a Windows runner. If you add domains or keys, update the README + both scripts.
 
-## 📄 Licenza
+## 📄 License
 
-MIT — vedi [LICENSE](LICENSE). Usalo, forcalo, condividilo. Il tuo PC, le tue regole. ☠️
+MIT — see [LICENSE](LICENSE). Use it, fork it, share it. Your PC, your rules. ☠️

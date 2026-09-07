@@ -7,6 +7,7 @@ param(
   [switch]$NoFirewall,
   [switch]$NoProductPatch
 )
+if ($env:VSCODE_OBLITERATOR_STRICT -eq '1') { $Strict = $true }
 
 $ErrorActionPreference = 'SilentlyContinue'
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()

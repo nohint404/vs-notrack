@@ -22,7 +22,7 @@ process_base() {
   mkdir -p "$USER_DIR"
 
   [ -f "$SETTINGS" ] && cp -f "$SETTINGS" "$SETTINGS.bak-$(date +%Y%m%d-%H%M%S)" && echo "[backup] $SETTINGS"
-  STRICT_PY="$STRICT" python3 - "$SETTINGS" <<'EOF'
+  STRICT_PY="$STRICT" python3 -c '
 import json, os, sys
 path = sys.argv[1]
 strict = os.environ.get("STRICT_PY") == "1"
@@ -64,10 +64,10 @@ if os.path.exists(path):
 data.update(killer)
 json.dump(data, open(path, "w"), indent=4)
 print(f"[ok] blindato: {path}")
-EOF
+' "$SETTINGS"
 
   [ -f "$ARGV" ] && cp -f "$ARGV" "$ARGV.bak-$(date +%Y%m%d-%H%M%S)" && echo "[backup] $ARGV"
-  python3 - "$ARGV" <<'EOF'
+  python3 -c '
 import json, os, sys
 path = sys.argv[1]
 data = {}
@@ -77,7 +77,7 @@ if os.path.exists(path):
 data.update({"enable-crash-reporter": False, "disable-telemetry": True, "disable-experiments": True})
 json.dump(data, open(path, "w"), indent=4)
 print(f"[ok] blindato: {path}")
-EOF
+' "$ARGV"
 }
 
 if [ "$OS" = "Darwin" ]; then
@@ -100,7 +100,7 @@ export VSCODE_TELEMETRY_LEVEL=off DOTNET_CLI_TELEMETRY_OPTOUT=1 POWERSHELL_TELEM
 if [ "$NO_PRODUCT_PATCH" != "1" ]; then
   patch_product_json() {
     [ -f "$1" ] || return 0
-    STRICT_PY="$STRICT" python3 - "$1" <<'EOF'
+    STRICT_PY="$STRICT" python3 -c '
 import json, sys, os, shutil, datetime
 path = sys.argv[1]
 strict = os.environ.get("STRICT_PY") == "1"
@@ -118,14 +118,14 @@ if strict and "extensionsGallery" in data:
                                  "itemUrl": "https://open-vsx.org/vscode/item"}
     changed = True
 if not changed:
-    print(f"[info] product.json gia' neutro: {path}"); sys.exit(0)
+    print(f"[info] product.json gia neutro: {path}"); sys.exit(0)
 try:
     shutil.copy(path, path + ".bak-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
     json.dump(data, open(path, "w"), indent=2)
     print(f"[ok] neutralizzato: {path}")
 except PermissionError:
     print(f"[!] product.json non scrivibile (serve sudo): {path}")
-EOF
+' "$1"
   }
   if [ "$OS" = "Darwin" ]; then
     patch_product_json "/Applications/Visual Studio Code.app/Contents/Resources/app/product.json"
