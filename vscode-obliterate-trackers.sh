@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# vs-notrack — Linux + macOS. Usage: curl -fsSL <url> | bash  (interactive menu) | STRICT=1 COPILOT=purge MENU=0 bash script.sh
+# vs-notrack - Linux + macOS. Usage: curl -fsSL <url> | bash  (interactive menu) | STRICT=1 COPILOT=purge MENU=0 bash script.sh
 set -u
 START_MS=$(date +%s%3N 2>/dev/null || echo 0)
 STRICT="${STRICT:-0}"
@@ -53,7 +53,7 @@ if [ "$MENU" = "1" ] && can_prompt; then
 fi
 
 if [ "$STRICT" = "1" ]; then MODE="STRICT (zero Microsoft)"; else MODE="NORMAL (store working)"; fi
-echo "=== VSCODE TRACKER OBLITERATOR — Linux/macOS [$MODE] ==="
+echo "=== VSCODE TRACKER OBLITERATOR - Linux/macOS [$MODE] ==="
 
 OS="$(uname -s)"
 

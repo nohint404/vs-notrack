@@ -63,18 +63,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: PS probe (temporary diagnostics)
-        shell: powershell
-        run: |
-          $all = Get-Content .\vscode-obliterate-trackers.ps1
-          foreach ($n in @(12, 14, 17, 25, 29)) {
-            $t = $null; $e = $null
-            [void][System.Management.Automation.Language.Parser]::ParseInput((($all | Select-Object -First $n) -join "`n"), [ref]$t, [ref]$e)
-            $str = @($e | Where-Object { $_.Message -like '*terminator*' -or $_.Message -like '*token*' })
-            Write-Host "PRE from 1..${n}: $($str.Count) errors"
-            $str | ForEach-Object { Write-Host "  -> line $($_.Extent.StartLineNumber): $($_.Message)" }
-          }
-
       - name: PowerShell syntax check (no execution)
         shell: powershell
         run: |

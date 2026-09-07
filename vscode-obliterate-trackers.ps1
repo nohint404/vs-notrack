@@ -1,5 +1,5 @@
-#Requires -Version 5.1
-# vs-notrack — Windows. Usage: powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 [-Strict] [-PurgeCopilot] [-NoHosts] [-NoFirewall] [-NoProductPatch]
+﻿#Requires -Version 5.1
+# vs-notrack - Windows. Usage: powershell -ExecutionPolicy Bypass -File vscode-obliterate-trackers.ps1 [-Strict] [-PurgeCopilot] [-NoHosts] [-NoFirewall] [-NoProductPatch]
 [CmdletBinding()]
 param(
   [switch]$Strict,
@@ -14,7 +14,7 @@ if ($env:VSCODE_OBLITERATOR_PURGECOPILOT -eq '1') { $PurgeCopilot = $true }
 $ErrorActionPreference = 'SilentlyContinue'
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $mode = if ($Strict) { 'STRICT (zero Microsoft)' } else { 'NORMAL (store working)' }
-Write-Host "`n=== VSCODE TRACKER OBLITERATOR — Windows [$mode] ===" -ForegroundColor Red
+Write-Host "`n=== VSCODE TRACKER OBLITERATOR - Windows [$mode] ===" -ForegroundColor Red
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
   ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
